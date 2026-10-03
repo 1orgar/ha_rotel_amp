@@ -27,39 +27,51 @@
           "name_cd": "CD: name",
           "player_cd": "CD: linked media player",
           "follow_cd": "CD: switch to this input when the player starts playing",
+          "fixvol_cd": "CD: keep the player volume at 100 %",
           "name_coax1": "Coax 1: name",
           "player_coax1": "Coax 1: linked media player",
           "follow_coax1": "Coax 1: switch to this input when the player starts playing",
+          "fixvol_coax1": "Coax 1: keep the player volume at 100 %",
           "name_coax2": "Coax 2: name",
           "player_coax2": "Coax 2: linked media player",
           "follow_coax2": "Coax 2: switch to this input when the player starts playing",
+          "fixvol_coax2": "Coax 2: keep the player volume at 100 %",
           "name_opt1": "Optical 1: name",
           "player_opt1": "Optical 1: linked media player",
           "follow_opt1": "Optical 1: switch to this input when the player starts playing",
+          "fixvol_opt1": "Optical 1: keep the player volume at 100 %",
           "name_opt2": "Optical 2: name",
           "player_opt2": "Optical 2: linked media player",
           "follow_opt2": "Optical 2: switch to this input when the player starts playing",
+          "fixvol_opt2": "Optical 2: keep the player volume at 100 %",
           "name_aux": "Aux: name",
           "player_aux": "Aux: linked media player",
           "follow_aux": "Aux: switch to this input when the player starts playing",
+          "fixvol_aux": "Aux: keep the player volume at 100 %",
           "name_tuner": "Tuner: name",
           "player_tuner": "Tuner: linked media player",
           "follow_tuner": "Tuner: switch to this input when the player starts playing",
+          "fixvol_tuner": "Tuner: keep the player volume at 100 %",
           "name_phono": "Phono: name",
           "player_phono": "Phono: linked media player",
           "follow_phono": "Phono: switch to this input when the player starts playing",
+          "fixvol_phono": "Phono: keep the player volume at 100 %",
           "name_usb": "USB: name",
           "player_usb": "USB: linked media player",
           "follow_usb": "USB: switch to this input when the player starts playing",
+          "fixvol_usb": "USB: keep the player volume at 100 %",
           "name_bluetooth": "Bluetooth: name",
           "player_bluetooth": "Bluetooth: linked media player",
           "follow_bluetooth": "Bluetooth: switch to this input when the player starts playing",
+          "fixvol_bluetooth": "Bluetooth: keep the player volume at 100 %",
           "name_bal_xlr": "XLR: name",
           "player_bal_xlr": "XLR: linked media player",
           "follow_bal_xlr": "XLR: switch to this input when the player starts playing",
+          "fixvol_bal_xlr": "XLR: keep the player volume at 100 %",
           "name_pc_usb": "PC USB: name",
           "player_pc_usb": "PC USB: linked media player",
-          "follow_pc_usb": "PC USB: switch to this input when the player starts playing"
+          "follow_pc_usb": "PC USB: switch to this input when the player starts playing",
+          "fixvol_pc_usb": "PC USB: keep the player volume at 100 %"
         }
       }
     },
@@ -68,7 +80,8 @@
       "unknown": "Unexpected error",
       "no_sources": "Select at least one input",
       "duplicate_name": "Names must be unique",
-      "self_player": "Cannot link the amplifier to itself"
+      "self_player": "Cannot link the amplifier to itself",
+      "no_response": "The device is reachable but does not answer Rotel commands"
     },
     "abort": {
       "already_configured": "This amplifier is already configured"
@@ -93,39 +106,51 @@
           "name_cd": "CD: name",
           "player_cd": "CD: linked media player",
           "follow_cd": "CD: switch to this input when the player starts playing",
+          "fixvol_cd": "CD: keep the player volume at 100 %",
           "name_coax1": "Coax 1: name",
           "player_coax1": "Coax 1: linked media player",
           "follow_coax1": "Coax 1: switch to this input when the player starts playing",
+          "fixvol_coax1": "Coax 1: keep the player volume at 100 %",
           "name_coax2": "Coax 2: name",
           "player_coax2": "Coax 2: linked media player",
           "follow_coax2": "Coax 2: switch to this input when the player starts playing",
+          "fixvol_coax2": "Coax 2: keep the player volume at 100 %",
           "name_opt1": "Optical 1: name",
           "player_opt1": "Optical 1: linked media player",
           "follow_opt1": "Optical 1: switch to this input when the player starts playing",
+          "fixvol_opt1": "Optical 1: keep the player volume at 100 %",
           "name_opt2": "Optical 2: name",
           "player_opt2": "Optical 2: linked media player",
           "follow_opt2": "Optical 2: switch to this input when the player starts playing",
+          "fixvol_opt2": "Optical 2: keep the player volume at 100 %",
           "name_aux": "Aux: name",
           "player_aux": "Aux: linked media player",
           "follow_aux": "Aux: switch to this input when the player starts playing",
+          "fixvol_aux": "Aux: keep the player volume at 100 %",
           "name_tuner": "Tuner: name",
           "player_tuner": "Tuner: linked media player",
           "follow_tuner": "Tuner: switch to this input when the player starts playing",
+          "fixvol_tuner": "Tuner: keep the player volume at 100 %",
           "name_phono": "Phono: name",
           "player_phono": "Phono: linked media player",
           "follow_phono": "Phono: switch to this input when the player starts playing",
+          "fixvol_phono": "Phono: keep the player volume at 100 %",
           "name_usb": "USB: name",
           "player_usb": "USB: linked media player",
           "follow_usb": "USB: switch to this input when the player starts playing",
+          "fixvol_usb": "USB: keep the player volume at 100 %",
           "name_bluetooth": "Bluetooth: name",
           "player_bluetooth": "Bluetooth: linked media player",
           "follow_bluetooth": "Bluetooth: switch to this input when the player starts playing",
+          "fixvol_bluetooth": "Bluetooth: keep the player volume at 100 %",
           "name_bal_xlr": "XLR: name",
           "player_bal_xlr": "XLR: linked media player",
           "follow_bal_xlr": "XLR: switch to this input when the player starts playing",
+          "fixvol_bal_xlr": "XLR: keep the player volume at 100 %",
           "name_pc_usb": "PC USB: name",
           "player_pc_usb": "PC USB: linked media player",
-          "follow_pc_usb": "PC USB: switch to this input when the player starts playing"
+          "follow_pc_usb": "PC USB: switch to this input when the player starts playing",
+          "fixvol_pc_usb": "PC USB: keep the player volume at 100 %"
         }
       }
     },
@@ -133,6 +158,52 @@
       "no_sources": "Select at least one input",
       "duplicate_name": "Names must be unique",
       "self_player": "Cannot link the amplifier to itself"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "model": {
+        "name": "Model"
+      },
+      "firmware": {
+        "name": "Firmware"
+      },
+      "pc_usb_firmware": {
+        "name": "PC-USB firmware"
+      },
+      "ip_address": {
+        "name": "IP address"
+      },
+      "mac_address": {
+        "name": "MAC address"
+      },
+      "latency": {
+        "name": "Response time"
+      },
+      "connection": {
+        "name": "Connection",
+        "state": {
+          "connected": "Connected",
+          "disconnected": "Disconnected"
+        }
+      },
+      "connected_since": {
+        "name": "Connected since"
+      },
+      "last_message": {
+        "name": "Last message"
+      },
+      "reconnects": {
+        "name": "Reconnects"
+      },
+      "last_error": {
+        "name": "Last connection error"
+      }
+    },
+    "button": {
+      "test_connection": {
+        "name": "Test connection"
+      }
     }
   }
 }

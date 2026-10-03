@@ -63,13 +63,44 @@ async def test_player_start_turns_amp_on_and_selects_input(
     entry = await _setup(hass, fake_rotel)
     assert hass.states.get(ENTITY).state == "off"
 
+    # amp ignores the first input command right after boot -> fast retry
+    fake_rotel.ignore_source_commands = 1
+    loop = asyncio.get_running_loop()
+    start = loop.time()
     hass.states.async_set(ALICE, "playing", {"supported_features": FEATS})
     await wait_for(lambda: "power_on!" in fake_rotel.received)
-    await fake_rotel.push("power=on$")
-    fake_rotel.state["power"] = "on"
-    await wait_for(lambda: "coax1!" in fake_rotel.received)
     await wait_for(lambda: hass.states.get(ENTITY).attributes.get("source") == "Алиса")
+    assert loop.time() - start < 3.0  # power on + settle + one retry
+    assert fake_rotel.received.count("coax1!") == 2
     assert hass.states.get(ENTITY).state == "playing"
+    await hass.config_entries.async_unload(entry.entry_id)
+
+
+async def test_switch_when_on_is_immediate(hass: HomeAssistant, fake_rotel) -> None:
+    fake_rotel.state.update(power="on", source="opt1")
+    hass.states.async_set(ALICE, "idle", {"supported_features": FEATS})
+    entry = await _setup(hass, fake_rotel)
+    loop = asyncio.get_running_loop()
+    start = loop.time()
+    hass.states.async_set(ALICE, "playing", {"supported_features": FEATS})
+    await wait_for(lambda: hass.states.get(ENTITY).attributes.get("source") == "Алиса")
+    assert loop.time() - start < 0.5
+    assert "power_on!" not in fake_rotel.received
+    await hass.config_entries.async_unload(entry.entry_id)
+
+
+async def test_only_current_input_player_keeps_playing(
+    hass: HomeAssistant, fake_rotel
+) -> None:
+    """Several linked players already playing -> keep only the current one."""
+    fake_rotel.state.update(power="on", source="coax2")
+    hass.states.async_set(ALICE, "playing", {"supported_features": FEATS})
+    hass.states.async_set(PLAYER, "playing", {"supported_features": FEATS})
+    entry = await _setup(hass, fake_rotel)
+    calls = _record_services(hass)
+    # input changed on the remote -> the other player must stop
+    await fake_rotel.push("source=coax2$")
+    await wait_for(lambda: calls == [("media_pause", ALICE)])
     await hass.config_entries.async_unload(entry.entry_id)
 
 

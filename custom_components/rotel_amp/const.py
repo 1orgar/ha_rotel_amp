@@ -29,8 +29,17 @@ SOURCE_PLAYER_PREFIX: Final = "player_"
 # Prefix of per-source "follow playback" switches ("follow_coax2" ...)
 SOURCE_FOLLOW_PREFIX: Final = "follow_"
 
-# Delay between power on and the source command (amp ignores input while booting)
-POWER_ON_SOURCE_TIMEOUT: Final = 20.0
+# Prefix of per-source "keep linked player at 100 % volume" switches
+SOURCE_FIXVOL_PREFIX: Final = "fixvol_"
+CONF_SOURCE_FIXED_VOLUME: Final = "source_fixed_volume"
+
+# Follow playback timings
+POWER_ON_TIMEOUT: Final = 8.0  # max wait for "power=on" after power_on!
+POWER_ON_SETTLE: Final = 0.3  # amp may ignore the input command right after boot
+SOURCE_CONFIRM_TIMEOUT: Final = 1.0  # wait for "source=..." before retrying
+SOURCE_ATTEMPTS: Final = 4
+
+PING_TIMEOUT: Final = 3.0
 
 # Connection tuning
 CONNECT_TIMEOUT: Final = 5.0
@@ -63,6 +72,11 @@ REPORTED_TO_SOURCE: Final[dict[str, str]] = {
 
 # queried on every poll
 POLL_QUERIES: Final = ("power?", "volume?", "mute?", "source?")
+
+# device information, queried once per connection
+DEVICE_QUERIES: Final = ("model?", "version?", "pc_version?", "ip?", "mac?")
+# reply keys that are device information
+DEVICE_INFO_KEYS: Final = ("model", "version", "pc_version", "ipaddress", "ip", "mac")
 
 STATE_QUERIES: Final = (
     "power?",

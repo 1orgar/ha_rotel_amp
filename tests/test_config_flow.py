@@ -48,6 +48,7 @@ async def test_config_flow(hass: HomeAssistant, fake_rotel) -> None:
         "source_names": {"coax2": "Стример", "opt1": "ТВ"},
         "source_players": {},
         "source_follow": [],
+        "source_fixed_volume": [],
         "max_volume": 60,
         "poll_interval": 20,
         "auto_off": 15,

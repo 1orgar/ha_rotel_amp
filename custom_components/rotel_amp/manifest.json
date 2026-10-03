@@ -10,5 +10,5 @@
   "issue_tracker": "https://github.com/1orgar/ha_rotel_amp/issues",
   "loggers": ["custom_components.rotel_amp"],
   "requirements": [],
-  "version": "3.3.0"
+  "version": "3.4.0"
 }

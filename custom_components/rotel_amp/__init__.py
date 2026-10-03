@@ -3,12 +3,13 @@ from __future__ import annotations
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_PORT, Platform
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers import device_registry as dr
 
 from .client import RotelClient
-from .const import CONF_POLL_INTERVAL, DEFAULT_POLL_INTERVAL
+from .const import CONF_POLL_INTERVAL, DEFAULT_POLL_INTERVAL, DOMAIN
 
-PLATFORMS: list[Platform] = [Platform.MEDIA_PLAYER]
+PLATFORMS: list[Platform] = [Platform.MEDIA_PLAYER, Platform.SENSOR, Platform.BUTTON]
 
 type RotelConfigEntry = ConfigEntry[RotelClient]
 
@@ -31,6 +32,31 @@ async def async_setup_entry(hass: HomeAssistant, entry: RotelConfigEntry) -> boo
         )
     )
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
+
+    @callback
+    def _update_device(key: str, value: str) -> None:
+        """Model/firmware/MAC arrive after connecting: update the device."""
+        if key not in ("model", "version", "mac"):
+            return
+        device_registry = dr.async_get(hass)
+        device = device_registry.async_get_device(
+            identifiers={(DOMAIN, entry.unique_id or entry.entry_id)}
+        )
+        if device is None:
+            return
+        changes: dict = {}
+        if key == "model" and device.model != value:
+            changes["model"] = value
+        elif key == "version" and device.sw_version != value:
+            changes["sw_version"] = value
+        elif key == "mac":
+            conn = (dr.CONNECTION_NETWORK_MAC, dr.format_mac(value))
+            if conn not in device.connections:
+                changes["merge_connections"] = {conn}
+        if changes:
+            device_registry.async_update_device(device.id, **changes)
+
+    entry.async_on_unload(client.add_update_callback(_update_device))
     return True
 
 

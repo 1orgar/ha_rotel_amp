@@ -27,6 +27,8 @@ Based on [k4Mr3/Rotel-RA-1572](https://github.com/k4Mr3/Rotel-RA-1572), rewritte
 - **Linked media player per input** (replaces a `universal` media player setup, see below).
 - **Follow playback:** when a linked player starts playing, the amplifier turns on, switches to its input and pauses the other players.
 - **Auto power off** after N minutes without playback.
+- **Fixed 100 % volume** on linked players (volume is controlled on the amplifier).
+- **Device info sensors** (model, firmware, IP, MAC, connection state) and a **Test connection** button.
 - Changes made on the front panel or remote arrive instantly (push).
 - Actions for tone, balance, speakers A/B, dimmer, tone bypass and PC-USB class.
 
@@ -78,11 +80,29 @@ With this integration you only link *Alice → media_player.yandex_station_xxx* 
 ### Switch to the input when its player starts playing
 Each linked player has a **"switch to this input when the player starts playing"** option. When that player starts playing (its state changes to `playing`):
 
-1. If the amplifier is off, it is turned on.
-2. If another input is selected, the amplifier switches to this player's input.
-3. Every other linked player that is currently playing is paused (or stopped if it can't pause).
+1. Every other linked player that is currently playing is paused right away (or stopped if it can't pause).
+2. If the amplifier is off, it is turned on. The input is switched as soon as the amplifier reports `power=on`, with a short 0.3 s settle and no fixed delay.
+3. The amplifier switches to this player's input. If the amplifier ignores the command (this can happen right after boot), it is resent every second, up to 4 times. If the amplifier is already on, the switch is immediate.
 
 For example, you start music on the Yandex station: the amplifier wakes up and switches to *Alice*. Later you start a stream on the other player: the amplifier switches to *Player* and the station is paused.
+
+**Only one player at a time.** When at least one input has this option enabled, only the linked player of the current input is allowed to play. If several linked players are playing, the others are paused. This is checked whenever the input changes (including from the remote or front panel), when the amplifier turns on, and when a player without the option starts playing.
+
+### Fixed 100 % volume
+Each linked player also has a **"keep the player volume at 100 %"** option. Volume is controlled on the amplifier, so the player should always output full level. When enabled, the integration sets the player to 100 % and unmutes it. This happens at startup and every time the player's state changes, so if someone lowers the volume on the player itself, it is restored immediately. Players that are off or unavailable are left alone.
+
+## Device information and connection test
+The device gets diagnostic entities:
+
+| Entity | |
+|---|---|
+| Model, Firmware, PC-USB firmware (disabled by default), IP address, MAC address | read from the amplifier on every connect; model/firmware/MAC also appear on the device page |
+| Connection | `connected` / `disconnected` |
+| Connected since, Reconnects, Last connection error, Last message (disabled by default) | connection diagnostics |
+| Response time | latency of the last connection test, ms |
+| **Test connection** button | sends `power?` and measures the reply time; an error is shown if the amplifier doesn't answer |
+
+When you add the integration, the config flow also checks that the device actually answers Rotel commands, not just that the port is open.
 
 ## Auto power off
 **Auto power off, min** (`0` disables it) turns the amplifier off after it has been on with nothing playing for the given time. "Playing" means the linked player of the current input is `playing`. On inputs without a linked player, nothing is ever considered playing, so the timer runs whenever the amplifier is on. The timer restarts every time playback stops, and is cancelled as soon as something plays or the amplifier is turned off.

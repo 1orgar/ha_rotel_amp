@@ -30,7 +30,16 @@ class FakeRotel:
         self.port = 0
         self.received: list[str] = []
         self.writers: list[asyncio.StreamWriter] = []
-        self.state = {"power": "on", "source": "coax2", "volume": "30", "mute": "off"}
+        self.state = {
+            "power": "on",
+            "source": "coax2",
+            "volume": "30",
+            "mute": "off",
+            "model": "RA-1572",
+            "version": "V1.4.3",
+            "mac": "00:11:22:33:44:55",
+        }
+        self.ignore_source_commands = 0  # simulate amp booting
 
     async def start(self) -> None:
         self.server = await asyncio.start_server(
@@ -89,12 +98,23 @@ class FakeRotel:
         if self.mute_replies:
             return None
         name = cmd[:-1]
+        if cmd == "ip?":
+            return "ipaddress=127.0.0.1$"
         if cmd.endswith("?") and name in self.state:
             return f"{name}={self.state[name]}$"
+        if name == "power_on":
+            self.state["power"] = "on"
+            return "power=on$"
+        if name == "power_off":
+            self.state["power"] = "standby"
+            return "power=standby$"
         if name.startswith("vol_") and name[4:].isdigit():
             self.state["volume"] = name[4:]
             return f"volume={self.state['volume']}$"
         if name in ("coax1", "coax2", "opt1", "cd"):
+            if self.ignore_source_commands > 0:
+                self.ignore_source_commands -= 1
+                return None
             self.state["source"] = name
             return f"source={name}$"
         return None

@@ -4,14 +4,20 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Callable
 import contextlib
+from datetime import datetime
 import logging
 import socket
 import time
 
+from homeassistant.util import dt as dt_util
+
 from .const import (
     CONNECT_TIMEOUT,
+    DEVICE_INFO_KEYS,
+    DEVICE_QUERIES,
     FULL_REFRESH_EVERY,
     HEARTBEAT_INTERVAL,
+    PING_TIMEOUT,
     POLL_QUERIES,
     RECONNECT_MAX_DELAY,
     RECONNECT_MIN_DELAY,
@@ -59,14 +65,46 @@ def parse_messages(buffer: str) -> tuple[list[tuple[str, str]], str]:
     return messages, rest
 
 
-async def async_test_connection(host: str, port: int) -> None:
-    """Open a connection and close it. Raises OSError/TimeoutError on failure."""
-    _, writer = await asyncio.wait_for(
+class NoResponseError(Exception):
+    """TCP connection works but the device does not speak the Rotel protocol."""
+
+
+async def async_test_connection(host: str, port: int) -> dict[str, str]:
+    """Connect, query model/firmware and return what the amp answered.
+
+    Raises OSError/TimeoutError if the port is unreachable and
+    NoResponseError if nothing Rotel-like comes back.
+    """
+    reader, writer = await asyncio.wait_for(
         asyncio.open_connection(host, port), timeout=CONNECT_TIMEOUT
     )
-    writer.close()
-    with contextlib.suppress(Exception):
-        await writer.wait_closed()
+    info: dict[str, str] = {}
+    try:
+        writer.write(b"model?version?power?")
+        await asyncio.wait_for(writer.drain(), timeout=WRITE_TIMEOUT)
+        buffer = ""
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + PING_TIMEOUT
+        while "power" not in info:
+            remaining = deadline - loop.time()
+            if remaining <= 0:
+                break
+            try:
+                data = await asyncio.wait_for(reader.read(1024), timeout=remaining)
+            except TimeoutError:
+                break
+            if not data:
+                break
+            buffer += data.decode("ascii", errors="ignore")
+            messages, buffer = parse_messages(buffer)
+            info.update(messages)
+    finally:
+        writer.close()
+        with contextlib.suppress(Exception):
+            await writer.wait_closed()
+    if not info:
+        raise NoResponseError(f"{host}:{port} does not answer Rotel commands")
+    return info
 
 
 class RotelClient:
@@ -91,11 +129,47 @@ class RotelClient:
         self._connected = False
         self._update_callbacks: list[UpdateCallback] = []
         self._connection_callbacks: list[ConnectionCallback] = []
+        self._pong: asyncio.Future[None] | None = None
+        # diagnostics
+        self.device_info: dict[str, str] = {}
+        self.connected_since: datetime | None = None
+        self.last_message: datetime | None = None
+        self.reconnects = 0
+        self.last_error: str | None = None
+        self.last_ping_ms: float | None = None
 
     @property
     def connected(self) -> bool:
         """Return True if connected."""
         return self._connected
+
+    async def async_ping(self) -> float:
+        """Round-trip a `power?` query. Returns latency in ms.
+
+        Raises ConnectionError if not connected and TimeoutError if the amp
+        does not answer.
+        """
+        loop = asyncio.get_running_loop()
+        if self._pong is None or self._pong.done():
+            self._pong = loop.create_future()
+        pong = self._pong
+        start = time.monotonic()
+        await self.send("power?")
+        try:
+            await asyncio.wait_for(asyncio.shield(pong), timeout=PING_TIMEOUT)
+        except TimeoutError:
+            self.last_ping_ms = None
+            raise
+        self.last_ping_ms = round((time.monotonic() - start) * 1000, 1)
+        self._notify("ping", str(self.last_ping_ms))
+        return self.last_ping_ms
+
+    def _notify(self, key: str, value: str) -> None:
+        for cb in list(self._update_callbacks):
+            try:
+                cb(key, value)
+            except Exception:  # noqa: BLE001
+                _LOGGER.exception("Error in update callback")
 
     def add_update_callback(self, cb: UpdateCallback) -> Callable[[], None]:
         """Register a (key, value) callback."""
@@ -214,7 +288,12 @@ class RotelClient:
                 _LOGGER.info("Connected to Rotel at %s:%s", self.host, self.port)
                 delay = RECONNECT_MIN_DELAY
                 self._last_power = None
+                if self.connected_since is not None:
+                    self.reconnects += 1
+                self.connected_since = dt_util.utcnow()
+                self.last_error = None
                 self._set_connected(True)
+                await self.query(DEVICE_QUERIES)
                 await self.query_state()
                 poll_task = (
                     asyncio.create_task(self._poll_loop())
@@ -232,8 +311,10 @@ class RotelClient:
                 raise
             except (OSError, asyncio.TimeoutError, ConnectionError) as err:
                 _LOGGER.debug("Rotel connection error: %s", err)
-            except Exception:  # noqa: BLE001
+                self.last_error = str(err) or type(err).__name__
+            except Exception as err:  # noqa: BLE001
                 _LOGGER.exception("Unexpected error in Rotel connection loop")
+                self.last_error = str(err) or type(err).__name__
 
             await self._close()
             if self._connected:
@@ -264,6 +345,7 @@ class RotelClient:
             if not data:
                 raise ConnectionError("Connection closed by Rotel")
             last_rx = time.monotonic()
+            self.last_message = dt_util.utcnow()
             buffer += data.decode("ascii", errors="ignore")
             messages, buffer = parse_messages(buffer)
             for key, value in messages:
@@ -273,9 +355,9 @@ class RotelClient:
                         # just woke up from standby: values may have changed
                         self._spawn_refresh()
                     self._last_power = value
-                for cb in list(self._update_callbacks):
-                    try:
-                        cb(key, value)
-                    except Exception:  # noqa: BLE001
-                        _LOGGER.exception("Error in update callback")
+                    if self._pong is not None and not self._pong.done():
+                        self._pong.set_result(None)
+                if key in DEVICE_INFO_KEYS:
+                    self.device_info["ip" if key == "ipaddress" else key] = value
+                self._notify(key, value)
 

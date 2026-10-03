@@ -15,11 +15,12 @@ from homeassistant.core import callback
 from homeassistant.helpers import entity_registry as er, selector
 import voluptuous as vol
 
-from .client import async_test_connection
+from .client import NoResponseError, async_test_connection
 from .const import (
     CONF_AUTO_OFF,
     CONF_MAX_VOLUME,
     CONF_POLL_INTERVAL,
+    CONF_SOURCE_FIXED_VOLUME,
     CONF_SOURCE_FOLLOW,
     CONF_SOURCE_NAMES,
     CONF_SOURCE_PLAYERS,
@@ -30,6 +31,7 @@ from .const import (
     DEFAULT_POLL_INTERVAL,
     DEFAULT_PORT,
     DOMAIN,
+    SOURCE_FIXVOL_PREFIX,
     SOURCE_FOLLOW_PREFIX,
     SOURCE_NAME_PREFIX,
     SOURCE_PLAYER_PREFIX,
@@ -91,6 +93,7 @@ def _names_schema(
     names: dict[str, str],
     players: dict[str, str],
     follow: list[str],
+    fixvol: list[str],
 ) -> vol.Schema:
     """Per input: name, optional linked media player, follow-playback switch."""
     fields: dict[Any, Any] = {}
@@ -113,14 +116,17 @@ def _names_schema(
         fields[
             vol.Optional(f"{SOURCE_FOLLOW_PREFIX}{key}", default=key in follow)
         ] = selector.BooleanSelector()
+        fields[
+            vol.Optional(f"{SOURCE_FIXVOL_PREFIX}{key}", default=key in fixvol)
+        ] = selector.BooleanSelector()
     return vol.Schema(fields)
 
 
-def _follow_from_input(
-    players: dict[str, str], user_input: dict[str, Any]
+def _flags_from_input(
+    players: dict[str, str], user_input: dict[str, Any], prefix: str
 ) -> list[str]:
-    """Inputs with follow-playback enabled (only those that have a player)."""
-    return [k for k in players if user_input.get(f"{SOURCE_FOLLOW_PREFIX}{k}")]
+    """Inputs with a per-player flag enabled (only those that have a player)."""
+    return [k for k in players if user_input.get(f"{prefix}{k}")]
 
 
 def _names_from_input(sources: list[str], user_input: dict[str, Any]) -> dict[str, str]:
@@ -181,13 +187,16 @@ class RotelConfigFlow(ConfigFlow, domain=DOMAIN):
             await self.async_set_unique_id(f"{host}:{port}")
             self._abort_if_unique_id_configured()
             try:
-                await async_test_connection(host, port)
+                info = await async_test_connection(host, port)
             except (OSError, TimeoutError):
                 errors["base"] = "cannot_connect"
+            except NoResponseError:
+                errors["base"] = "no_response"
             except Exception:  # noqa: BLE001
                 _LOGGER.exception("Unexpected error")
                 errors["base"] = "unknown"
             else:
+                _LOGGER.debug("Rotel answered: %s", info)
                 self._data = {
                     CONF_HOST: host,
                     CONF_PORT: port,
@@ -243,10 +252,12 @@ class RotelConfigFlow(ConfigFlow, domain=DOMAIN):
         names: dict[str, str] = {}
         players: dict[str, str] = {}
         follow: list[str] = []
+        fixvol: list[str] = []
         if user_input is not None:
             names = _names_from_input(self._sources, user_input)
             players = _players_from_input(self._sources, user_input)
-            follow = _follow_from_input(players, user_input)
+            follow = _flags_from_input(players, user_input, SOURCE_FOLLOW_PREFIX)
+            fixvol = _flags_from_input(players, user_input, SOURCE_FIXVOL_PREFIX)
             errors = _validate_names(names)
             if not errors:
                 return self.async_create_entry(
@@ -257,6 +268,7 @@ class RotelConfigFlow(ConfigFlow, domain=DOMAIN):
                         CONF_SOURCE_NAMES: names,
                         CONF_SOURCE_PLAYERS: players,
                         CONF_SOURCE_FOLLOW: follow,
+                        CONF_SOURCE_FIXED_VOLUME: fixvol,
                         CONF_MAX_VOLUME: self._max_volume,
                         CONF_POLL_INTERVAL: self._poll,
                         CONF_AUTO_OFF: self._auto_off,
@@ -264,7 +276,7 @@ class RotelConfigFlow(ConfigFlow, domain=DOMAIN):
                 )
         return self.async_show_form(
             step_id="names",
-            data_schema=_names_schema(self._sources, names, players, follow),
+            data_schema=_names_schema(self._sources, names, players, follow, fixvol),
             errors=errors,
         )
 
@@ -318,10 +330,12 @@ class RotelOptionsFlow(OptionsFlow):
         names = dict(self.config_entry.options.get(CONF_SOURCE_NAMES, {}))
         players = dict(self.config_entry.options.get(CONF_SOURCE_PLAYERS, {}))
         follow = list(self.config_entry.options.get(CONF_SOURCE_FOLLOW, []))
+        fixvol = list(self.config_entry.options.get(CONF_SOURCE_FIXED_VOLUME, []))
         if user_input is not None:
             names = _names_from_input(self._sources, user_input)
             players = _players_from_input(self._sources, user_input)
-            follow = _follow_from_input(players, user_input)
+            follow = _flags_from_input(players, user_input, SOURCE_FOLLOW_PREFIX)
+            fixvol = _flags_from_input(players, user_input, SOURCE_FIXVOL_PREFIX)
             errors = _validate_names(names)
             own = {
                 e.entity_id
@@ -339,6 +353,7 @@ class RotelOptionsFlow(OptionsFlow):
                         CONF_SOURCE_NAMES: names,
                         CONF_SOURCE_PLAYERS: players,
                         CONF_SOURCE_FOLLOW: follow,
+                        CONF_SOURCE_FIXED_VOLUME: fixvol,
                         CONF_MAX_VOLUME: self._max_volume,
                         CONF_POLL_INTERVAL: self._poll,
                         CONF_AUTO_OFF: self._auto_off,
@@ -346,7 +361,7 @@ class RotelOptionsFlow(OptionsFlow):
                 )
         return self.async_show_form(
             step_id="names",
-            data_schema=_names_schema(self._sources, names, players, follow),
+            data_schema=_names_schema(self._sources, names, players, follow, fixvol),
             errors=errors,
         )
 
