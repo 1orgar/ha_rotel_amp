@@ -20,15 +20,42 @@
         }
       },
       "names": {
-        "title": "Названия входов",
-        "description": "Задайте понятные названия (например, Coax 2 → Стример)."
+        "title": "Названия входов и связанные плееры",
+        "description": "Задайте понятные названия (например, Coax 2 → Стример). К входу можно привязать media player: пока выбран этот вход, плеер усилителя показывает трек и обложку и передаёт ему play/pause/next/перемотку/обзор медиа. Громкость, питание и вход всегда управляются усилителем.",
+        "data": {
+          "name_cd": "CD: название",
+          "player_cd": "CD: связанный media player",
+          "name_coax1": "Coax 1: название",
+          "player_coax1": "Coax 1: связанный media player",
+          "name_coax2": "Coax 2: название",
+          "player_coax2": "Coax 2: связанный media player",
+          "name_opt1": "Optical 1: название",
+          "player_opt1": "Optical 1: связанный media player",
+          "name_opt2": "Optical 2: название",
+          "player_opt2": "Optical 2: связанный media player",
+          "name_aux": "Aux: название",
+          "player_aux": "Aux: связанный media player",
+          "name_tuner": "Tuner: название",
+          "player_tuner": "Tuner: связанный media player",
+          "name_phono": "Phono: название",
+          "player_phono": "Phono: связанный media player",
+          "name_usb": "USB: название",
+          "player_usb": "USB: связанный media player",
+          "name_bluetooth": "Bluetooth: название",
+          "player_bluetooth": "Bluetooth: связанный media player",
+          "name_bal_xlr": "XLR: название",
+          "player_bal_xlr": "XLR: связанный media player",
+          "name_pc_usb": "PC USB: название",
+          "player_pc_usb": "PC USB: связанный media player"
+        }
       }
     },
     "error": {
       "cannot_connect": "Не удалось подключиться к усилителю",
       "unknown": "Неожиданная ошибка",
       "no_sources": "Выберите хотя бы один вход",
-      "duplicate_name": "Названия должны быть уникальными"
+      "duplicate_name": "Названия должны быть уникальными",
+      "self_player": "Нельзя связать усилитель с самим собой"
     },
     "abort": {
       "already_configured": "Этот усилитель уже настроен"
@@ -46,13 +73,40 @@
         }
       },
       "names": {
-        "title": "Названия входов",
-        "description": "Задайте понятные названия (например, Coax 2 → Стример)."
+        "title": "Названия входов и связанные плееры",
+        "description": "Задайте понятные названия (например, Coax 2 → Стример). К входу можно привязать media player: пока выбран этот вход, плеер усилителя показывает трек и обложку и передаёт ему play/pause/next/перемотку/обзор медиа. Громкость, питание и вход всегда управляются усилителем.",
+        "data": {
+          "name_cd": "CD: название",
+          "player_cd": "CD: связанный media player",
+          "name_coax1": "Coax 1: название",
+          "player_coax1": "Coax 1: связанный media player",
+          "name_coax2": "Coax 2: название",
+          "player_coax2": "Coax 2: связанный media player",
+          "name_opt1": "Optical 1: название",
+          "player_opt1": "Optical 1: связанный media player",
+          "name_opt2": "Optical 2: название",
+          "player_opt2": "Optical 2: связанный media player",
+          "name_aux": "Aux: название",
+          "player_aux": "Aux: связанный media player",
+          "name_tuner": "Tuner: название",
+          "player_tuner": "Tuner: связанный media player",
+          "name_phono": "Phono: название",
+          "player_phono": "Phono: связанный media player",
+          "name_usb": "USB: название",
+          "player_usb": "USB: связанный media player",
+          "name_bluetooth": "Bluetooth: название",
+          "player_bluetooth": "Bluetooth: связанный media player",
+          "name_bal_xlr": "XLR: название",
+          "player_bal_xlr": "XLR: связанный media player",
+          "name_pc_usb": "PC USB: название",
+          "player_pc_usb": "PC USB: связанный media player"
+        }
       }
     },
     "error": {
       "no_sources": "Выберите хотя бы один вход",
-      "duplicate_name": "Названия должны быть уникальными"
+      "duplicate_name": "Названия должны быть уникальными",
+      "self_player": "Нельзя связать усилитель с самим собой"
     }
   }
 }

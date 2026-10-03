@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.2.0
+- Linked media player per input: while the input is selected, the amp entity shows the linked player's state, metadata and artwork and forwards transport, seek, play media and browse to it. Volume, power and input stay on the amp.
+- Opaque brand images (readable on dark theme), new icon.
+
 ## 3.1.0
 - Periodic status polling (power/volume/mute/source, full refresh every 10th poll), configurable interval.
 - Full state refresh when the amp wakes from standby.

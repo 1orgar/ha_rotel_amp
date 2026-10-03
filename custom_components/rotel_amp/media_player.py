@@ -5,17 +5,72 @@ import logging
 from typing import Any
 
 from homeassistant.components.media_player import (
+    ATTR_APP_ID,
+    ATTR_APP_NAME,
+    ATTR_MEDIA_ALBUM_ARTIST,
+    ATTR_MEDIA_ALBUM_NAME,
+    ATTR_MEDIA_ANNOUNCE,
+    ATTR_MEDIA_ARTIST,
+    ATTR_MEDIA_CHANNEL,
+    ATTR_MEDIA_CONTENT_ID,
+    ATTR_MEDIA_CONTENT_TYPE,
+    ATTR_MEDIA_DURATION,
+    ATTR_MEDIA_ENQUEUE,
+    ATTR_MEDIA_EPISODE,
+    ATTR_MEDIA_EXTRA,
+    ATTR_MEDIA_PLAYLIST,
+    ATTR_MEDIA_POSITION,
+    ATTR_MEDIA_POSITION_UPDATED_AT,
+    ATTR_MEDIA_REPEAT,
+    ATTR_MEDIA_SEASON,
+    ATTR_MEDIA_SEEK_POSITION,
+    ATTR_MEDIA_SERIES_TITLE,
+    ATTR_MEDIA_SHUFFLE,
+    ATTR_MEDIA_TITLE,
+    ATTR_MEDIA_TRACK,
+    DATA_COMPONENT as MP_DATA_COMPONENT,
+    DOMAIN as MP_DOMAIN,
+    SERVICE_CLEAR_PLAYLIST,
+    SERVICE_PLAY_MEDIA,
+    SERVICE_SHUFFLE_SET,
+    BrowseMedia,
     MediaPlayerDeviceClass,
     MediaPlayerEntity,
     MediaPlayerEntityFeature,
     MediaPlayerState,
+    MediaType,
+    RepeatMode,
 )
-from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.const import (
+    ATTR_ENTITY_ID,
+    ATTR_ENTITY_PICTURE,
+    ATTR_SUPPORTED_FEATURES,
+    CONF_HOST,
+    CONF_NAME,
+    CONF_PORT,
+    SERVICE_MEDIA_NEXT_TRACK,
+    SERVICE_MEDIA_PAUSE,
+    SERVICE_MEDIA_PLAY,
+    SERVICE_MEDIA_PLAY_PAUSE,
+    SERVICE_MEDIA_PREVIOUS_TRACK,
+    SERVICE_MEDIA_SEEK,
+    SERVICE_MEDIA_STOP,
+    SERVICE_REPEAT_SET,
+    STATE_UNAVAILABLE,
+    STATE_UNKNOWN,
+)
+from homeassistant.core import (
+    Event,
+    EventStateChangedData,
+    HomeAssistant,
+    State,
+    callback,
+)
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import config_validation as cv, entity_platform
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from homeassistant.helpers.event import async_track_state_change_event
 import voluptuous as vol
 
 from . import RotelConfigEntry
@@ -23,6 +78,7 @@ from .client import RotelClient
 from .const import (
     CONF_MAX_VOLUME,
     CONF_SOURCE_NAMES,
+    CONF_SOURCE_PLAYERS,
     CONF_SOURCES,
     DEFAULT_MAX_VOLUME,
     DOMAIN,
@@ -32,19 +88,73 @@ from .const import (
 
 _LOGGER = logging.getLogger(__name__)
 
-SUPPORTED_FEATURES = (
+# Always handled by the amplifier itself (power, volume, input).
+OWN_FEATURES = (
     MediaPlayerEntityFeature.TURN_ON
     | MediaPlayerEntityFeature.TURN_OFF
     | MediaPlayerEntityFeature.VOLUME_SET
     | MediaPlayerEntityFeature.VOLUME_MUTE
     | MediaPlayerEntityFeature.VOLUME_STEP
     | MediaPlayerEntityFeature.SELECT_SOURCE
+)
+
+# Without a linked player the amp's own transport commands are used.
+SUPPORTED_FEATURES = (
+    OWN_FEATURES
     | MediaPlayerEntityFeature.PLAY
     | MediaPlayerEntityFeature.PAUSE
     | MediaPlayerEntityFeature.STOP
     | MediaPlayerEntityFeature.NEXT_TRACK
     | MediaPlayerEntityFeature.PREVIOUS_TRACK
 )
+
+# Features taken from the linked player of the current input.
+PROXY_FEATURES = (
+    MediaPlayerEntityFeature.PLAY
+    | MediaPlayerEntityFeature.PAUSE
+    | MediaPlayerEntityFeature.STOP
+    | MediaPlayerEntityFeature.NEXT_TRACK
+    | MediaPlayerEntityFeature.PREVIOUS_TRACK
+    | MediaPlayerEntityFeature.SEEK
+    | MediaPlayerEntityFeature.PLAY_MEDIA
+    | MediaPlayerEntityFeature.BROWSE_MEDIA
+    | MediaPlayerEntityFeature.SHUFFLE_SET
+    | MediaPlayerEntityFeature.REPEAT_SET
+    | MediaPlayerEntityFeature.CLEAR_PLAYLIST
+    | MediaPlayerEntityFeature.MEDIA_ENQUEUE
+    | MediaPlayerEntityFeature.MEDIA_ANNOUNCE
+)
+
+# Linked player states shown instead of plain "on".
+PROXY_STATES = {
+    MediaPlayerState.PLAYING,
+    MediaPlayerState.PAUSED,
+    MediaPlayerState.IDLE,
+    MediaPlayerState.BUFFERING,
+}
+
+# property name -> linked player attribute
+PROXY_ATTRS = {
+    "media_content_id": ATTR_MEDIA_CONTENT_ID,
+    "media_content_type": ATTR_MEDIA_CONTENT_TYPE,
+    "media_duration": ATTR_MEDIA_DURATION,
+    "media_position": ATTR_MEDIA_POSITION,
+    "media_position_updated_at": ATTR_MEDIA_POSITION_UPDATED_AT,
+    "media_title": ATTR_MEDIA_TITLE,
+    "media_artist": ATTR_MEDIA_ARTIST,
+    "media_album_name": ATTR_MEDIA_ALBUM_NAME,
+    "media_album_artist": ATTR_MEDIA_ALBUM_ARTIST,
+    "media_track": ATTR_MEDIA_TRACK,
+    "media_series_title": ATTR_MEDIA_SERIES_TITLE,
+    "media_season": ATTR_MEDIA_SEASON,
+    "media_episode": ATTR_MEDIA_EPISODE,
+    "media_channel": ATTR_MEDIA_CHANNEL,
+    "media_playlist": ATTR_MEDIA_PLAYLIST,
+    "app_id": ATTR_APP_ID,
+    "app_name": ATTR_APP_NAME,
+    "shuffle": ATTR_MEDIA_SHUFFLE,
+    "repeat": ATTR_MEDIA_REPEAT,
+}
 
 
 def _parse_signed(value: str) -> int:
@@ -127,6 +237,8 @@ class RotelMediaPlayer(MediaPlayerEntity):
         names: dict[str, str] = options.get(CONF_SOURCE_NAMES, {})
         self._names = {k: names.get(k) or SOURCES[k][2] for k in self._sources}
         self._by_name = {v: k for k, v in self._names.items()}
+        players: dict[str, str] = options.get(CONF_SOURCE_PLAYERS, {})
+        self._players = {k: v for k, v in players.items() if k in self._sources and v}
 
         self._attr_unique_id = entry.unique_id or entry.entry_id
         self._attr_device_info = DeviceInfo(
@@ -160,6 +272,18 @@ class RotelMediaPlayer(MediaPlayerEntity):
             self._client.add_connection_callback(self._handle_connection)
         )
         self._attr_available = self._client.connected
+        if self._players:
+            self.async_on_remove(
+                async_track_state_change_event(
+                    self.hass, sorted(set(self._players.values())), self._handle_linked
+                )
+            )
+
+    @callback
+    def _handle_linked(self, event: Event[EventStateChangedData]) -> None:
+        """Re-render when the linked player of the current input changes."""
+        if event.data["entity_id"] == self._linked_entity_id:
+            self.async_write_ha_state()
 
     @callback
     def _handle_connection(self, connected: bool) -> None:
@@ -221,7 +345,129 @@ class RotelMediaPlayer(MediaPlayerEntity):
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Extra attributes."""
-        return {**self._extra, "address": self._host_info}
+        return {
+            **self._extra,
+            "address": self._host_info,
+            "linked_player": self._linked_entity_id,
+        }
+
+    # ---- linked (proxied) media player ------------------------------------
+    @property
+    def _linked_entity_id(self) -> str | None:
+        """Linked media_player of the currently selected input."""
+        if self._raw_source is None:
+            return None
+        key = REPORTED_TO_SOURCE.get(self._raw_source)
+        return self._players.get(key) if key else None
+
+    @property
+    def _linked(self) -> State | None:
+        """State of the linked player if it is usable."""
+        if self._attr_state != MediaPlayerState.ON:
+            return None
+        entity_id = self._linked_entity_id
+        if entity_id is None or self.hass is None:
+            return None
+        state = self.hass.states.get(entity_id)
+        if state is None or state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
+            return None
+        return state
+
+    def _linked_attr(self, name: str) -> Any:
+        state = self._linked
+        return state.attributes.get(name) if state else None
+
+    @property
+    def state(self) -> MediaPlayerState | None:
+        """Amp power; while on, playback state of the linked player."""
+        if self._attr_state != MediaPlayerState.ON:
+            return self._attr_state
+        linked = self._linked
+        if linked is not None and linked.state in PROXY_STATES:
+            return MediaPlayerState(linked.state)
+        return MediaPlayerState.ON
+
+    @property
+    def supported_features(self) -> MediaPlayerEntityFeature:
+        """Own features + playback features of the linked player."""
+        linked = self._linked
+        if linked is None:
+            return SUPPORTED_FEATURES
+        child = MediaPlayerEntityFeature(
+            int(linked.attributes.get(ATTR_SUPPORTED_FEATURES, 0))
+        )
+        return OWN_FEATURES | (child & PROXY_FEATURES)
+
+    @property
+    def entity_picture(self) -> str | None:
+        """Artwork of the linked player (already proxied by HA)."""
+        return self._linked_attr(ATTR_ENTITY_PICTURE)
+
+    @property
+    def media_image_url(self) -> str | None:
+        """Artwork of the linked player."""
+        return self._linked_attr(ATTR_ENTITY_PICTURE)
+
+    async def _async_call_linked(
+        self, service: str, data: dict[str, Any] | None = None
+    ) -> bool:
+        """Call a media_player service on the linked player. False if none."""
+        linked = self._linked
+        if linked is None:
+            return False
+        await self.hass.services.async_call(
+            MP_DOMAIN,
+            service,
+            {**(data or {}), ATTR_ENTITY_ID: linked.entity_id},
+            blocking=True,
+            context=self._context,
+        )
+        return True
+
+    async def async_play_media(
+        self, media_type: MediaType | str, media_id: str, **kwargs: Any
+    ) -> None:
+        """Play media on the linked player."""
+        data: dict[str, Any] = {
+            ATTR_MEDIA_CONTENT_TYPE: media_type,
+            ATTR_MEDIA_CONTENT_ID: media_id,
+        }
+        for key in (ATTR_MEDIA_ENQUEUE, ATTR_MEDIA_ANNOUNCE, ATTR_MEDIA_EXTRA):
+            if (value := kwargs.get(key)) is not None:
+                data[key] = value.value if hasattr(value, "value") else value
+        if not await self._async_call_linked(SERVICE_PLAY_MEDIA, data):
+            raise ServiceValidationError("No linked media player for current input")
+
+    async def async_browse_media(
+        self,
+        media_content_type: MediaType | str | None = None,
+        media_content_id: str | None = None,
+    ) -> BrowseMedia:
+        """Browse media of the linked player."""
+        linked = self._linked
+        if linked is not None and (
+            entity := self.hass.data[MP_DATA_COMPONENT].get_entity(linked.entity_id)
+        ):
+            return await entity.async_browse_media(media_content_type, media_content_id)
+        raise HomeAssistantError("No linked media player for current input")
+
+    async def async_media_seek(self, position: float) -> None:
+        """Seek on the linked player."""
+        await self._async_call_linked(
+            SERVICE_MEDIA_SEEK, {ATTR_MEDIA_SEEK_POSITION: position}
+        )
+
+    async def async_set_shuffle(self, shuffle: bool) -> None:
+        """Shuffle on the linked player."""
+        await self._async_call_linked(SERVICE_SHUFFLE_SET, {ATTR_MEDIA_SHUFFLE: shuffle})
+
+    async def async_set_repeat(self, repeat: RepeatMode) -> None:
+        """Repeat on the linked player."""
+        await self._async_call_linked(SERVICE_REPEAT_SET, {ATTR_MEDIA_REPEAT: repeat})
+
+    async def async_clear_playlist(self) -> None:
+        """Clear playlist on the linked player."""
+        await self._async_call_linked(SERVICE_CLEAR_PLAYLIST)
 
 
     # ---- commands --------------------------------------------------------
@@ -277,25 +523,37 @@ class RotelMediaPlayer(MediaPlayerEntity):
             raise ServiceValidationError(f"Unknown source: {source}")
         await self.async_send(SOURCES[key][0])
 
+    # Transport: linked player of the current input if any, else the amp
+    # itself (controls USB/Bluetooth/PC-USB playback).
     async def async_media_play(self) -> None:
         """Play."""
-        await self.async_send("play!")
+        if not await self._async_call_linked(SERVICE_MEDIA_PLAY):
+            await self.async_send("play!")
 
     async def async_media_pause(self) -> None:
         """Pause."""
-        await self.async_send("pause!")
+        if not await self._async_call_linked(SERVICE_MEDIA_PAUSE):
+            await self.async_send("pause!")
+
+    async def async_media_play_pause(self) -> None:
+        """Toggle play/pause."""
+        if not await self._async_call_linked(SERVICE_MEDIA_PLAY_PAUSE):
+            await super().async_media_play_pause()
 
     async def async_media_stop(self) -> None:
         """Stop."""
-        await self.async_send("stop!")
+        if not await self._async_call_linked(SERVICE_MEDIA_STOP):
+            await self.async_send("stop!")
 
     async def async_media_next_track(self) -> None:
         """Next track."""
-        await self.async_send("trkf!")
+        if not await self._async_call_linked(SERVICE_MEDIA_NEXT_TRACK):
+            await self.async_send("trkf!")
 
     async def async_media_previous_track(self) -> None:
         """Previous track."""
-        await self.async_send("trkb!")
+        if not await self._async_call_linked(SERVICE_MEDIA_PREVIOUS_TRACK):
+            await self.async_send("trkb!")
 
     # ---- custom services -------------------------------------------------
     async def set_bass(self, level: int) -> None:
@@ -334,3 +592,13 @@ class RotelMediaPlayer(MediaPlayerEntity):
         """PC-USB audio class."""
         await self.async_send(f"pcusb_class_{usb_class}!")
 
+
+
+def _proxy_property(attr: str) -> property:
+    """Property that returns an attribute of the linked player."""
+    return property(lambda self: self._linked_attr(attr))
+
+
+# media metadata (title, artist, position, ...) comes from the linked player
+for _name, _attr in PROXY_ATTRS.items():
+    setattr(RotelMediaPlayer, _name, _proxy_property(_attr))

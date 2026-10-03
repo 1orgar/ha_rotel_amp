@@ -12,7 +12,7 @@ from homeassistant.config_entries import (
 )
 from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT
 from homeassistant.core import callback
-from homeassistant.helpers import selector
+from homeassistant.helpers import entity_registry as er, selector
 import voluptuous as vol
 
 from .client import async_test_connection
@@ -20,6 +20,7 @@ from .const import (
     CONF_MAX_VOLUME,
     CONF_POLL_INTERVAL,
     CONF_SOURCE_NAMES,
+    CONF_SOURCE_PLAYERS,
     CONF_SOURCES,
     DEFAULT_MAX_VOLUME,
     DEFAULT_NAME,
@@ -27,6 +28,7 @@ from .const import (
     DEFAULT_PORT,
     DOMAIN,
     SOURCE_NAME_PREFIX,
+    SOURCE_PLAYER_PREFIX,
     SOURCES,
 )
 
@@ -68,16 +70,28 @@ def _sources_schema(
     )
 
 
-def _names_schema(sources: list[str], names: dict[str, str]) -> vol.Schema:
-    return vol.Schema(
-        {
+def _names_schema(
+    sources: list[str], names: dict[str, str], players: dict[str, str]
+) -> vol.Schema:
+    """Per input: name (required) + optional linked media player."""
+    fields: dict[Any, Any] = {}
+    for key in sources:
+        fields[
             vol.Required(
                 f"{SOURCE_NAME_PREFIX}{key}",
                 default=names.get(key, SOURCES[key][2]),
-            ): selector.TextSelector()
-            for key in sources
-        }
-    )
+            )
+        ] = selector.TextSelector()
+        player_key = f"{SOURCE_PLAYER_PREFIX}{key}"
+        # suggested_value (not default) so the field can be cleared
+        marker = vol.Optional(
+            player_key,
+            description={"suggested_value": players.get(key)} if players.get(key) else None,
+        )
+        fields[marker] = selector.EntitySelector(
+            selector.EntitySelectorConfig(domain="media_player")
+        )
+    return vol.Schema(fields)
 
 
 def _names_from_input(sources: list[str], user_input: dict[str, Any]) -> dict[str, str]:
@@ -86,6 +100,17 @@ def _names_from_input(sources: list[str], user_input: dict[str, Any]) -> dict[st
         key: (user_input.get(f"{SOURCE_NAME_PREFIX}{key}") or "").strip()
         or SOURCES[key][2]
         for key in sources
+    }
+
+
+def _players_from_input(
+    sources: list[str], user_input: dict[str, Any]
+) -> dict[str, str]:
+    """Build {source_key: media_player entity_id} for inputs that have one."""
+    return {
+        key: player
+        for key in sources
+        if (player := user_input.get(f"{SOURCE_PLAYER_PREFIX}{key}"))
     }
 
 
@@ -182,8 +207,10 @@ class RotelConfigFlow(ConfigFlow, domain=DOMAIN):
         """Rename selected inputs."""
         errors: dict[str, str] = {}
         names: dict[str, str] = {}
+        players: dict[str, str] = {}
         if user_input is not None:
             names = _names_from_input(self._sources, user_input)
+            players = _players_from_input(self._sources, user_input)
             errors = _validate_names(names)
             if not errors:
                 return self.async_create_entry(
@@ -192,13 +219,14 @@ class RotelConfigFlow(ConfigFlow, domain=DOMAIN):
                     options={
                         CONF_SOURCES: self._sources,
                         CONF_SOURCE_NAMES: names,
+                        CONF_SOURCE_PLAYERS: players,
                         CONF_MAX_VOLUME: self._max_volume,
                         CONF_POLL_INTERVAL: self._poll,
                     },
                 )
         return self.async_show_form(
             step_id="names",
-            data_schema=_names_schema(self._sources, names),
+            data_schema=_names_schema(self._sources, names, players),
             errors=errors,
         )
 
@@ -247,21 +275,33 @@ class RotelOptionsFlow(OptionsFlow):
         """Rename inputs."""
         errors: dict[str, str] = {}
         names = dict(self.config_entry.options.get(CONF_SOURCE_NAMES, {}))
+        players = dict(self.config_entry.options.get(CONF_SOURCE_PLAYERS, {}))
         if user_input is not None:
             names = _names_from_input(self._sources, user_input)
+            players = _players_from_input(self._sources, user_input)
             errors = _validate_names(names)
+            own = {
+                e.entity_id
+                for e in er.async_entries_for_config_entry(
+                    er.async_get(self.hass), self.config_entry.entry_id
+                )
+            }
+            for key, player in players.items():
+                if player in own:
+                    errors[f"{SOURCE_PLAYER_PREFIX}{key}"] = "self_player"
             if not errors:
                 return self.async_create_entry(
                     data={
                         CONF_SOURCES: self._sources,
                         CONF_SOURCE_NAMES: names,
+                        CONF_SOURCE_PLAYERS: players,
                         CONF_MAX_VOLUME: self._max_volume,
                         CONF_POLL_INTERVAL: self._poll,
                     }
                 )
         return self.async_show_form(
             step_id="names",
-            data_schema=_names_schema(self._sources, names),
+            data_schema=_names_schema(self._sources, names, players),
             errors=errors,
         )
 

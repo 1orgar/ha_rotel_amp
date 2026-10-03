@@ -24,6 +24,7 @@ Based on [k4Mr3/Rotel-RA-1572](https://github.com/k4Mr3/Rotel-RA-1572), rewritte
   - full state is requested on every connect/reconnect;
   - power, volume, mute and input are polled every N seconds (default 30); every 10th poll requests the full state;
   - full state is re-requested when the amplifier wakes from standby.
+- **Linked media player per input** (replaces a `universal` media player setup, see below).
 - Changes made on the front panel or remote arrive instantly (push).
 - Actions for tone, balance, speakers A/B, dimmer, tone bypass and PC-USB class.
 
@@ -43,9 +44,34 @@ Set **POWER OPTION = Quick** on the amplifier, otherwise it is not reachable ove
 
 1. Host, port (default `9590`), name.
 2. Inputs you use, maximum volume, poll interval (`0` disables polling).
-3. Input names.
+3. Input names and, optionally, a linked media player for each input.
 
-You can change inputs, names, the volume limit and the poll interval later with **Configure**.
+You can change all of this later with **Configure**.
+
+## Linked media players
+Each input can be linked to another `media_player` entity, such as a streamer, a smart speaker or a Chromecast connected to that input. While that input is selected and the amplifier is on, the Rotel entity acts as a single combined player:
+
+| | comes from |
+|---|---|
+| power, volume, mute, input list / selection | **amplifier** |
+| state (`playing` / `paused` / `idle`), title, artist, album, artwork, position, app | **linked player** |
+| play / pause / stop / next / previous / seek / shuffle / repeat / play media / browse media | sent to the **linked player** |
+
+The available controls follow what the linked player supports. If the current input has no linked player, or that player is unavailable, the entity is a plain amplifier: its state is `on`, and transport commands go to the amplifier itself (USB/Bluetooth playback). The `linked_player` attribute shows which player is active.
+
+This replaces a manual `universal` media player setup like:
+
+```yaml
+media_player:
+  - platform: universal
+    children: [media_player.gostinaia, media_player.yandex_station_xxx]
+    active_child_template: >-
+      {% if is_state_attr('media_player.rotel_amplifier', 'source', 'Alice') %} ...
+    commands: { select_source: ..., turn_on: ..., turn_off: ... }
+    attributes: { volume_level: media_player.rotel_amplifier|volume_level, ... }
+```
+
+With this integration you only link *Alice → media_player.yandex_station_xxx* and *Player → media_player.gostinaia* in **Configure**.
 
 ## Actions
 | Action | Parameters |

@@ -40,6 +40,7 @@ async def test_config_flow(hass: HomeAssistant, fake_rotel) -> None:
     assert result["options"] == {
         "sources": ["coax2", "opt1"],
         "source_names": {"coax2": "Стример", "opt1": "ТВ"},
+        "source_players": {},
         "max_volume": 60,
         "poll_interval": 20,
     }
@@ -70,10 +71,22 @@ async def test_options_flow(hass: HomeAssistant, fake_rotel) -> None:
         result["flow_id"], {"sources": ["coax2", "cd"], "max_volume": 70, "poll_interval": 0}
     )
     assert result["step_id"] == "names"
+    # linking the integration's own entity is rejected
     result = await hass.config_entries.options.async_configure(
-        result["flow_id"], {"name_cd": "Проигрыватель", "name_coax2": "Streamer"}
+        result["flow_id"],
+        {"name_cd": "Проигрыватель", "name_coax2": "Streamer", "player_cd": ENTITY},
+    )
+    assert result["errors"] == {"player_cd": "self_player"}
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        {
+            "name_cd": "Проигрыватель",
+            "name_coax2": "Streamer",
+            "player_coax2": "media_player.streamer",
+        },
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert entry.options["source_players"] == {"coax2": "media_player.streamer"}
     await wait_for(
         lambda: (s := hass.states.get(ENTITY)) is not None
         and s.attributes.get("source_list") == ["Проигрыватель", "Streamer"]

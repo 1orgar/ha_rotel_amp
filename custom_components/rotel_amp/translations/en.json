@@ -20,15 +20,42 @@
         }
       },
       "names": {
-        "title": "Input names",
-        "description": "Give the inputs meaningful names (e.g. Coax 2 → Streamer)."
+        "title": "Input names and linked players",
+        "description": "Give the inputs meaningful names (e.g. Coax 2 → Streamer). Optionally link a media player to an input: while that input is selected, the amplifier entity shows its track info and artwork and passes play/pause/next/seek/browse to it. Volume, power and input always stay on the amplifier.",
+        "data": {
+          "name_cd": "CD: name",
+          "player_cd": "CD: linked media player",
+          "name_coax1": "Coax 1: name",
+          "player_coax1": "Coax 1: linked media player",
+          "name_coax2": "Coax 2: name",
+          "player_coax2": "Coax 2: linked media player",
+          "name_opt1": "Optical 1: name",
+          "player_opt1": "Optical 1: linked media player",
+          "name_opt2": "Optical 2: name",
+          "player_opt2": "Optical 2: linked media player",
+          "name_aux": "Aux: name",
+          "player_aux": "Aux: linked media player",
+          "name_tuner": "Tuner: name",
+          "player_tuner": "Tuner: linked media player",
+          "name_phono": "Phono: name",
+          "player_phono": "Phono: linked media player",
+          "name_usb": "USB: name",
+          "player_usb": "USB: linked media player",
+          "name_bluetooth": "Bluetooth: name",
+          "player_bluetooth": "Bluetooth: linked media player",
+          "name_bal_xlr": "XLR: name",
+          "player_bal_xlr": "XLR: linked media player",
+          "name_pc_usb": "PC USB: name",
+          "player_pc_usb": "PC USB: linked media player"
+        }
       }
     },
     "error": {
       "cannot_connect": "Failed to connect to the amplifier",
       "unknown": "Unexpected error",
       "no_sources": "Select at least one input",
-      "duplicate_name": "Names must be unique"
+      "duplicate_name": "Names must be unique",
+      "self_player": "Cannot link the amplifier to itself"
     },
     "abort": {
       "already_configured": "This amplifier is already configured"
@@ -46,13 +73,40 @@
         }
       },
       "names": {
-        "title": "Input names",
-        "description": "Give the inputs meaningful names (e.g. Coax 2 → Streamer)."
+        "title": "Input names and linked players",
+        "description": "Give the inputs meaningful names (e.g. Coax 2 → Streamer). Optionally link a media player to an input: while that input is selected, the amplifier entity shows its track info and artwork and passes play/pause/next/seek/browse to it. Volume, power and input always stay on the amplifier.",
+        "data": {
+          "name_cd": "CD: name",
+          "player_cd": "CD: linked media player",
+          "name_coax1": "Coax 1: name",
+          "player_coax1": "Coax 1: linked media player",
+          "name_coax2": "Coax 2: name",
+          "player_coax2": "Coax 2: linked media player",
+          "name_opt1": "Optical 1: name",
+          "player_opt1": "Optical 1: linked media player",
+          "name_opt2": "Optical 2: name",
+          "player_opt2": "Optical 2: linked media player",
+          "name_aux": "Aux: name",
+          "player_aux": "Aux: linked media player",
+          "name_tuner": "Tuner: name",
+          "player_tuner": "Tuner: linked media player",
+          "name_phono": "Phono: name",
+          "player_phono": "Phono: linked media player",
+          "name_usb": "USB: name",
+          "player_usb": "USB: linked media player",
+          "name_bluetooth": "Bluetooth: name",
+          "player_bluetooth": "Bluetooth: linked media player",
+          "name_bal_xlr": "XLR: name",
+          "player_bal_xlr": "XLR: linked media player",
+          "name_pc_usb": "PC USB: name",
+          "player_pc_usb": "PC USB: linked media player"
+        }
       }
     },
     "error": {
       "no_sources": "Select at least one input",
-      "duplicate_name": "Names must be unique"
+      "duplicate_name": "Names must be unique",
+      "self_player": "Cannot link the amplifier to itself"
     }
   }
 }
