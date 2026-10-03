@@ -1,0 +1,14 @@
+{
+  "domain": "rotel_amp",
+  "name": "Rotel Amplifier (TCP)",
+  "codeowners": ["@1orgar"],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/1orgar/ha_rotel_amp",
+  "integration_type": "device",
+  "iot_class": "local_push",
+  "issue_tracker": "https://github.com/1orgar/ha_rotel_amp/issues",
+  "loggers": ["custom_components.rotel_amp"],
+  "requirements": [],
+  "version": "3.1.0"
+}

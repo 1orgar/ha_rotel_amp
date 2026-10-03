@@ -1,0 +1,58 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Rotel amplifier",
+        "description": "Enter the amplifier network address. Set POWER OPTION to \"Quick\" on the amplifier so it stays reachable in standby.",
+        "data": {
+          "host": "Host",
+          "port": "Port",
+          "name": "Name"
+        }
+      },
+      "sources": {
+        "title": "Inputs",
+        "description": "Select the inputs you actually use. Only these will be shown in Home Assistant.",
+        "data": {
+          "sources": "Inputs",
+          "max_volume": "Maximum volume (1-96)",
+          "poll_interval": "Status poll interval, s (0 = off)"
+        }
+      },
+      "names": {
+        "title": "Input names",
+        "description": "Give the inputs meaningful names (e.g. Coax 2 → Streamer)."
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to the amplifier",
+      "unknown": "Unexpected error",
+      "no_sources": "Select at least one input",
+      "duplicate_name": "Names must be unique"
+    },
+    "abort": {
+      "already_configured": "This amplifier is already configured"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Inputs",
+        "description": "Select the inputs you actually use.",
+        "data": {
+          "sources": "Inputs",
+          "max_volume": "Maximum volume (1-96)",
+          "poll_interval": "Status poll interval, s (0 = off)"
+        }
+      },
+      "names": {
+        "title": "Input names",
+        "description": "Give the inputs meaningful names (e.g. Coax 2 → Streamer)."
+      }
+    },
+    "error": {
+      "no_sources": "Select at least one input",
+      "duplicate_name": "Names must be unique"
+    }
+  }
+}

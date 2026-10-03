@@ -1,0 +1,35 @@
+name: Bug report
+description: Something does not work
+labels: [bug]
+body:
+  - type: input
+    id: model
+    attributes:
+      label: Amplifier model
+      placeholder: RA-1572
+    validations:
+      required: true
+  - type: input
+    id: ha
+    attributes:
+      label: Home Assistant version
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Integration version
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened / steps to reproduce
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Debug logs
+      description: "Enable `custom_components.rotel_amp: debug` and paste the relevant part"
+      render: text
