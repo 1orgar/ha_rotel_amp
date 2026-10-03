@@ -4,78 +4,80 @@
 
 # Rotel Amplifier (TCP) for Home Assistant
 
+🇷🇺 [Русская версия](https://github.com/1orgar/ha_rotel_amp/blob/main/README-RU.md)
+
 [![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://hacs.xyz/docs/faq/custom_repositories)
 [![Validate](https://github.com/1orgar/ha_rotel_amp/actions/workflows/validate.yml/badge.svg)](https://github.com/1orgar/ha_rotel_amp/actions/workflows/validate.yml)
 [![Release](https://img.shields.io/github/v/release/1orgar/ha_rotel_amp)](https://github.com/1orgar/ha_rotel_amp/releases)
 [![License](https://img.shields.io/github/license/1orgar/ha_rotel_amp)](https://github.com/1orgar/ha_rotel_amp/blob/main/LICENSE)
 
-Локальное управление усилителями Rotel (RA-1572, RA-1572MKII и другими моделями с тем же TCP-протоколом) по сети, через порт 9590.
-Основано на [k4Mr3/Rotel-RA-1572](https://github.com/k4Mr3/Rotel-RA-1572) и переписано под современный Home Assistant.
+Local network control of Rotel amplifiers (RA-1572, RA-1572MKII and other models using the same TCP protocol) on port 9590.
+Based on [k4Mr3/Rotel-RA-1572](https://github.com/k4Mr3/Rotel-RA-1572), rewritten for modern Home Assistant.
 
-## Возможности
-- **Настройка через UI** (config flow), YAML не нужен.
-- **Только нужные входы.** Отметьте входы, которыми пользуетесь, — в списке источников будут только они.
-- **Свои названия входов**, например `Coax 2` → `Стример`. Меняются в любой момент через «Настроить».
-- **Ограничение максимальной громкости.**
-- **Автоматический реконнект:** после перезагрузки или отключения питания усилителя интеграция подключается сама, перезапускать HA не нужно.
-- **Актуальное состояние:**
-  - сразу после подключения или переподключения запрашивается всё состояние;
-  - каждые N секунд (по умолчанию 30) запрашиваются питание, громкость, mute и вход; каждый 10-й опрос запрашивает всё состояние;
-  - при выходе усилителя из standby автоматически запрашивается всё состояние.
-- Изменения, сделанные на передней панели или пультом, приходят мгновенно (push).
-- Сервисы для тембров, баланса, колонок A/B, диммера, bypass и класса PC-USB.
+## Features
+- **UI setup** (config flow), no YAML needed.
+- **Only the inputs you use.** Select your inputs and only those appear in the source list.
+- **Custom input names**, e.g. `Coax 2` → `Streamer`. Change them any time via **Configure**.
+- **Maximum volume limit.**
+- **Automatic reconnect:** after the amplifier reboots or loses power, the integration reconnects by itself, so you don't need to restart Home Assistant.
+- **Always up-to-date state:**
+  - full state is requested on every connect/reconnect;
+  - power, volume, mute and input are polled every N seconds (default 30); every 10th poll requests the full state;
+  - full state is re-requested when the amplifier wakes from standby.
+- Changes made on the front panel or remote arrive instantly (push).
+- Actions for tone, balance, speakers A/B, dimmer, tone bypass and PC-USB class.
 
-## Установка
+## Installation
 
 ### HACS
-1. HACS → ⋮ → *Custom repositories* → `https://github.com/1orgar/ha_rotel_amp`, тип *Integration*.
-2. Найдите **Rotel Amplifier (TCP)**, установите и перезапустите Home Assistant.
+1. HACS → ⋮ → *Custom repositories* → `https://github.com/1orgar/ha_rotel_amp`, type *Integration*.
+2. Find **Rotel Amplifier (TCP)**, install it and restart Home Assistant.
 
-### Вручную
-Скопируйте `custom_components/rotel_amp` в `<config>/custom_components/` и перезапустите HA.
+### Manual
+Copy `custom_components/rotel_amp` to `<config>/custom_components/` and restart Home Assistant.
 
-## Настройка
-На усилителе установите **POWER OPTION = Quick**, иначе в standby он недоступен по сети.
+## Configuration
+Set **POWER OPTION = Quick** on the amplifier, otherwise it is not reachable over the network in standby.
 
-*Настройки → Устройства и службы → Добавить интеграцию → Rotel Amplifier (TCP)*:
+*Settings → Devices & services → Add integration → Rotel Amplifier (TCP)*:
 
-1. Хост, порт (по умолчанию `9590`), название.
-2. Используемые входы, максимальная громкость, интервал опроса (`0` — отключить опрос).
-3. Названия входов.
+1. Host, port (default `9590`), name.
+2. Inputs you use, maximum volume, poll interval (`0` disables polling).
+3. Input names.
 
-Входы, названия, ограничение громкости и интервал опроса можно изменить позже кнопкой **«Настроить»**.
+You can change inputs, names, the volume limit and the poll interval later with **Configure**.
 
-## Сервисы
-| Сервис | Параметры |
+## Actions
+| Action | Parameters |
 |---|---|
 | `rotel_amp.set_bass` / `set_treble` | `level` −10…10 |
-| `rotel_amp.set_balance` | `level` −15…15 (минус — влево) |
+| `rotel_amp.set_balance` | `level` −15…15 (negative = left) |
 | `rotel_amp.set_dimmer` | `level` 0…6 |
 | `rotel_amp.set_bypass` | `bypass` |
 | `rotel_amp.set_speaker_a` / `set_speaker_b` | `enabled` |
 | `rotel_amp.set_pcusb_class` | `usb_class` `1` / `2` |
 | `rotel_amp.toggle_speaker_a/b`, `toggle_dimmer`, `bass_up/down`, `treble_up/down`, `balance_left/right` | — |
-| `rotel_amp.get_current_status` | — (принудительно запросить всё состояние) |
+| `rotel_amp.get_current_status` | — (force a full state refresh) |
 
-Значения тембров, баланса и других параметров доступны в атрибутах entity.
+Tone, balance and other values are available as entity attributes.
 
-## Отладка
+## Debugging
 ```yaml
 logger:
   logs:
     custom_components.rotel_amp: debug
 ```
 
-## Разработка
+## Development
 ```bash
 pip install -r requirements_test.txt
 ruff check custom_components tests
 pytest
 ```
-Тесты используют эмулятор усилителя: проверяются перезагрузка, «молчащий» усилитель, запуск при выключенном усилителе и опрос.
+The tests run against an amplifier emulator and cover reboot, a silent amplifier, startup while the amplifier is offline, and polling.
 
-### Релизы
-Версия берётся из `custom_components/rotel_amp/manifest.json`. При пуше в `main` с новой версией workflow **Tag & release** создаёт тег `v<version>` и GitHub Release с `rotel_amp.zip`.
+### Releases
+The version comes from `custom_components/rotel_amp/manifest.json`. When a new version is pushed to `main`, the **Tag & release** workflow creates the tag `v<version>` and a GitHub Release with `rotel_amp.zip`.
 
-## Лицензия
-Apache-2.0. Rotel — торговая марка её владельца. Проект не связан с Rotel; иконка — обобщённая ручка громкости.
+## License
+Apache-2.0. Rotel is a trademark of its owner. This project is not affiliated with Rotel; the icon is a generic volume knob.
