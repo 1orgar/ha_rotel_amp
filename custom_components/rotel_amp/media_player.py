@@ -1,6 +1,8 @@
 """Media player for Rotel amplifiers."""
 from __future__ import annotations
 
+import asyncio
+from datetime import datetime
 import logging
 from typing import Any
 
@@ -60,6 +62,7 @@ from homeassistant.const import (
     STATE_UNKNOWN,
 )
 from homeassistant.core import (
+    CALLBACK_TYPE,
     Event,
     EventStateChangedData,
     HomeAssistant,
@@ -70,18 +73,25 @@ from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import config_validation as cv, entity_platform
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.event import async_track_state_change_event
+from homeassistant.helpers.event import (
+    async_call_later,
+    async_track_state_change_event,
+)
 import voluptuous as vol
 
 from . import RotelConfigEntry
 from .client import RotelClient
 from .const import (
+    CONF_AUTO_OFF,
     CONF_MAX_VOLUME,
+    CONF_SOURCE_FOLLOW,
     CONF_SOURCE_NAMES,
     CONF_SOURCE_PLAYERS,
     CONF_SOURCES,
+    DEFAULT_AUTO_OFF,
     DEFAULT_MAX_VOLUME,
     DOMAIN,
+    POWER_ON_SOURCE_TIMEOUT,
     REPORTED_TO_SOURCE,
     SOURCES,
 )
@@ -239,6 +249,13 @@ class RotelMediaPlayer(MediaPlayerEntity):
         self._by_name = {v: k for k, v in self._names.items()}
         players: dict[str, str] = options.get(CONF_SOURCE_PLAYERS, {})
         self._players = {k: v for k, v in players.items() if k in self._sources and v}
+        self._follow = {
+            k for k in options.get(CONF_SOURCE_FOLLOW, []) if k in self._players
+        }
+        self._auto_off = float(options.get(CONF_AUTO_OFF, DEFAULT_AUTO_OFF)) * 60
+        self._auto_off_unsub: CALLBACK_TYPE | None = None
+        self._power_on_event = asyncio.Event()
+        self._follow_task: asyncio.Task | None = None
 
         self._attr_unique_id = entry.unique_id or entry.entry_id
         self._attr_device_info = DeviceInfo(
@@ -279,16 +296,31 @@ class RotelMediaPlayer(MediaPlayerEntity):
                 )
             )
 
+        self.async_on_remove(self._cancel_auto_off)
+        self.async_on_remove(self._cancel_follow)
+
     @callback
     def _handle_linked(self, event: Event[EventStateChangedData]) -> None:
-        """Re-render when the linked player of the current input changes."""
-        if event.data["entity_id"] == self._linked_entity_id:
-            self.async_write_ha_state()
+        """React to linked player changes."""
+        entity_id = event.data["entity_id"]
+        new, old = event.data["new_state"], event.data["old_state"]
+        if (
+            new is not None
+            and new.state == MediaPlayerState.PLAYING
+            and (old is None or old.state != MediaPlayerState.PLAYING)
+        ):
+            key = next(
+                (k for k in self._follow if self._players[k] == entity_id), None
+            )
+            if key is not None:
+                self._start_follow(key)
+        if entity_id == self._linked_entity_id:
+            self._write_state()
 
     @callback
     def _handle_connection(self, connected: bool) -> None:
         self._attr_available = connected
-        self.async_write_ha_state()
+        self._write_state()
 
     @callback
     def _handle_update(self, key: str, value: str) -> None:
@@ -297,13 +329,110 @@ class RotelMediaPlayer(MediaPlayerEntity):
         except (ValueError, IndexError):
             _LOGGER.debug("Cannot parse %s=%s", key, value)
             return
+        self._write_state()
+
+    @callback
+    def _write_state(self) -> None:
         self.async_write_ha_state()
+        self._update_auto_off()
+
+    # ---- follow playback -------------------------------------------------
+    @callback
+    def _start_follow(self, key: str) -> None:
+        """A follow-enabled player started playing: switch the amp to it."""
+        self._cancel_follow()
+        self._follow_task = self.hass.async_create_background_task(
+            self._async_follow(key), f"rotel_amp_follow_{key}"
+        )
+
+    @callback
+    def _cancel_follow(self) -> None:
+        if self._follow_task and not self._follow_task.done():
+            self._follow_task.cancel()
+        self._follow_task = None
+
+    async def _async_follow(self, key: str) -> None:
+        player = self._players[key]
+        _LOGGER.debug("%s started playing, switching to input %s", player, key)
+        try:
+            if self._attr_state != MediaPlayerState.ON:
+                self._power_on_event.clear()
+                await self._client.send("power_on!")
+                async with asyncio.timeout(POWER_ON_SOURCE_TIMEOUT):
+                    await self._power_on_event.wait()
+                await asyncio.sleep(1.0)  # amp needs a moment before input change
+            if REPORTED_TO_SOURCE.get(self._raw_source or "") != key:
+                await self._client.send(SOURCES[key][0])
+        except (ConnectionError, TimeoutError) as err:
+            _LOGGER.warning("Cannot switch Rotel to %s: %s", self._names[key], err)
+            return
+        await self._async_stop_others(player)
+
+    async def _async_stop_others(self, keep: str) -> None:
+        """Pause (or stop) every other linked player that is playing."""
+        for other in set(self._players.values()) - {keep}:
+            state = self.hass.states.get(other)
+            if state is None or state.state != MediaPlayerState.PLAYING:
+                continue
+            features = int(state.attributes.get(ATTR_SUPPORTED_FEATURES, 0))
+            service = (
+                SERVICE_MEDIA_PAUSE
+                if features & MediaPlayerEntityFeature.PAUSE
+                else SERVICE_MEDIA_STOP
+            )
+            _LOGGER.debug("Stopping %s (%s)", other, service)
+            try:
+                await self.hass.services.async_call(
+                    MP_DOMAIN, service, {ATTR_ENTITY_ID: other}, blocking=True
+                )
+            except HomeAssistantError as err:
+                _LOGGER.warning("Cannot stop %s: %s", other, err)
+
+    # ---- auto power off --------------------------------------------------
+    @callback
+    def _update_auto_off(self) -> None:
+        """Run the idle timer while the amp is on and nothing is playing."""
+        if not self._auto_off:
+            return
+        idle = (
+            self.available
+            and self._attr_state == MediaPlayerState.ON
+            and self.state != MediaPlayerState.PLAYING
+        )
+        if not idle:
+            self._cancel_auto_off()
+        elif self._auto_off_unsub is None:
+            self._auto_off_unsub = async_call_later(
+                self.hass, self._auto_off, self._async_auto_off
+            )
+
+    @callback
+    def _cancel_auto_off(self) -> None:
+        if self._auto_off_unsub is not None:
+            self._auto_off_unsub()
+            self._auto_off_unsub = None
+
+    async def _async_auto_off(self, _now: datetime) -> None:
+        self._auto_off_unsub = None
+        if (
+            self._attr_state == MediaPlayerState.ON
+            and self.state != MediaPlayerState.PLAYING
+        ):
+            _LOGGER.info(
+                "Nothing played for %s min, turning Rotel off", self._auto_off / 60
+            )
+            try:
+                await self._client.send("power_off!")
+            except ConnectionError as err:
+                _LOGGER.warning("Auto power off failed: %s", err)
 
     def _apply(self, key: str, value: str) -> None:
         if key == "power":
             self._attr_state = (
                 MediaPlayerState.ON if value == "on" else MediaPlayerState.OFF
             )
+            if value == "on":
+                self._power_on_event.set()
         elif key == "source":
             self._raw_source = value
         elif key == "volume":

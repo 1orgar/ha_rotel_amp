@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.3.0
+- Per linked player "switch to this input when the player starts playing": turns the amp on, selects the input and pauses the other playing linked players.
+- Auto power off after N minutes on with nothing playing.
+
 ## 3.2.0
 - Linked media player per input: while the input is selected, the amp entity shows the linked player's state, metadata and artwork and forwards transport, seek, play media and browse to it. Volume, power and input stay on the amp.
 - Opaque brand images (readable on dark theme), new icon.

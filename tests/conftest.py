@@ -58,7 +58,11 @@ class FakeRotel:
         self.server.close()
         for w in self.writers:
             w.close()
-        await self.server.wait_closed()
+        self.writers.clear()
+        try:
+            await asyncio.wait_for(self.server.wait_closed(), 2)
+        except TimeoutError:
+            pass
 
     async def _handle(self, reader, writer) -> None:
         self.writers.append(writer)

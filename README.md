@@ -25,6 +25,8 @@ Based on [k4Mr3/Rotel-RA-1572](https://github.com/k4Mr3/Rotel-RA-1572), rewritte
   - power, volume, mute and input are polled every N seconds (default 30); every 10th poll requests the full state;
   - full state is re-requested when the amplifier wakes from standby.
 - **Linked media player per input** (replaces a `universal` media player setup, see below).
+- **Follow playback:** when a linked player starts playing, the amplifier turns on, switches to its input and pauses the other players.
+- **Auto power off** after N minutes without playback.
 - Changes made on the front panel or remote arrive instantly (push).
 - Actions for tone, balance, speakers A/B, dimmer, tone bypass and PC-USB class.
 
@@ -43,8 +45,8 @@ Set **POWER OPTION = Quick** on the amplifier, otherwise it is not reachable ove
 *Settings → Devices & services → Add integration → Rotel Amplifier (TCP)*:
 
 1. Host, port (default `9590`), name.
-2. Inputs you use, maximum volume, poll interval (`0` disables polling).
-3. Input names and, optionally, a linked media player for each input.
+2. Inputs you use, maximum volume, poll interval (`0` disables polling), auto power off (`0` disables it).
+3. Input names and, optionally, a linked media player for each input with the "switch to this input" option.
 
 You can change all of this later with **Configure**.
 
@@ -72,6 +74,18 @@ media_player:
 ```
 
 With this integration you only link *Alice → media_player.yandex_station_xxx* and *Player → media_player.gostinaia* in **Configure**.
+
+### Switch to the input when its player starts playing
+Each linked player has a **"switch to this input when the player starts playing"** option. When that player starts playing (its state changes to `playing`):
+
+1. If the amplifier is off, it is turned on.
+2. If another input is selected, the amplifier switches to this player's input.
+3. Every other linked player that is currently playing is paused (or stopped if it can't pause).
+
+For example, you start music on the Yandex station: the amplifier wakes up and switches to *Alice*. Later you start a stream on the other player: the amplifier switches to *Player* and the station is paused.
+
+## Auto power off
+**Auto power off, min** (`0` disables it) turns the amplifier off after it has been on with nothing playing for the given time. "Playing" means the linked player of the current input is `playing`. On inputs without a linked player, nothing is ever considered playing, so the timer runs whenever the amplifier is on. The timer restarts every time playback stops, and is cancelled as soon as something plays or the amplifier is turned off.
 
 ## Actions
 | Action | Parameters |

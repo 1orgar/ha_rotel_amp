@@ -16,37 +16,50 @@
         "data": {
           "sources": "Inputs",
           "max_volume": "Maximum volume (1-96)",
-          "poll_interval": "Status poll interval, s (0 = off)"
+          "poll_interval": "Status poll interval, s (0 = off)",
+          "auto_off": "Auto power off when nothing plays, min (0 = off)"
         }
       },
       "names": {
         "title": "Input names and linked players",
-        "description": "Give the inputs meaningful names (e.g. Coax 2 → Streamer). Optionally link a media player to an input: while that input is selected, the amplifier entity shows its track info and artwork and passes play/pause/next/seek/browse to it. Volume, power and input always stay on the amplifier.",
+        "description": "Give the inputs meaningful names (e.g. Coax 2 → Streamer). Optionally link a media player to an input: while that input is selected, the amplifier entity shows its track info and artwork and passes play/pause/next/seek/browse to it. Volume, power and input always stay on the amplifier. With \"switch to this input\" enabled, the amplifier turns on and selects the input when the player starts playing, and other linked players are paused.",
         "data": {
           "name_cd": "CD: name",
           "player_cd": "CD: linked media player",
+          "follow_cd": "CD: switch to this input when the player starts playing",
           "name_coax1": "Coax 1: name",
           "player_coax1": "Coax 1: linked media player",
+          "follow_coax1": "Coax 1: switch to this input when the player starts playing",
           "name_coax2": "Coax 2: name",
           "player_coax2": "Coax 2: linked media player",
+          "follow_coax2": "Coax 2: switch to this input when the player starts playing",
           "name_opt1": "Optical 1: name",
           "player_opt1": "Optical 1: linked media player",
+          "follow_opt1": "Optical 1: switch to this input when the player starts playing",
           "name_opt2": "Optical 2: name",
           "player_opt2": "Optical 2: linked media player",
+          "follow_opt2": "Optical 2: switch to this input when the player starts playing",
           "name_aux": "Aux: name",
           "player_aux": "Aux: linked media player",
+          "follow_aux": "Aux: switch to this input when the player starts playing",
           "name_tuner": "Tuner: name",
           "player_tuner": "Tuner: linked media player",
+          "follow_tuner": "Tuner: switch to this input when the player starts playing",
           "name_phono": "Phono: name",
           "player_phono": "Phono: linked media player",
+          "follow_phono": "Phono: switch to this input when the player starts playing",
           "name_usb": "USB: name",
           "player_usb": "USB: linked media player",
+          "follow_usb": "USB: switch to this input when the player starts playing",
           "name_bluetooth": "Bluetooth: name",
           "player_bluetooth": "Bluetooth: linked media player",
+          "follow_bluetooth": "Bluetooth: switch to this input when the player starts playing",
           "name_bal_xlr": "XLR: name",
           "player_bal_xlr": "XLR: linked media player",
+          "follow_bal_xlr": "XLR: switch to this input when the player starts playing",
           "name_pc_usb": "PC USB: name",
-          "player_pc_usb": "PC USB: linked media player"
+          "player_pc_usb": "PC USB: linked media player",
+          "follow_pc_usb": "PC USB: switch to this input when the player starts playing"
         }
       }
     },
@@ -69,37 +82,50 @@
         "data": {
           "sources": "Inputs",
           "max_volume": "Maximum volume (1-96)",
-          "poll_interval": "Status poll interval, s (0 = off)"
+          "poll_interval": "Status poll interval, s (0 = off)",
+          "auto_off": "Auto power off when nothing plays, min (0 = off)"
         }
       },
       "names": {
         "title": "Input names and linked players",
-        "description": "Give the inputs meaningful names (e.g. Coax 2 → Streamer). Optionally link a media player to an input: while that input is selected, the amplifier entity shows its track info and artwork and passes play/pause/next/seek/browse to it. Volume, power and input always stay on the amplifier.",
+        "description": "Give the inputs meaningful names (e.g. Coax 2 → Streamer). Optionally link a media player to an input: while that input is selected, the amplifier entity shows its track info and artwork and passes play/pause/next/seek/browse to it. Volume, power and input always stay on the amplifier. With \"switch to this input\" enabled, the amplifier turns on and selects the input when the player starts playing, and other linked players are paused.",
         "data": {
           "name_cd": "CD: name",
           "player_cd": "CD: linked media player",
+          "follow_cd": "CD: switch to this input when the player starts playing",
           "name_coax1": "Coax 1: name",
           "player_coax1": "Coax 1: linked media player",
+          "follow_coax1": "Coax 1: switch to this input when the player starts playing",
           "name_coax2": "Coax 2: name",
           "player_coax2": "Coax 2: linked media player",
+          "follow_coax2": "Coax 2: switch to this input when the player starts playing",
           "name_opt1": "Optical 1: name",
           "player_opt1": "Optical 1: linked media player",
+          "follow_opt1": "Optical 1: switch to this input when the player starts playing",
           "name_opt2": "Optical 2: name",
           "player_opt2": "Optical 2: linked media player",
+          "follow_opt2": "Optical 2: switch to this input when the player starts playing",
           "name_aux": "Aux: name",
           "player_aux": "Aux: linked media player",
+          "follow_aux": "Aux: switch to this input when the player starts playing",
           "name_tuner": "Tuner: name",
           "player_tuner": "Tuner: linked media player",
+          "follow_tuner": "Tuner: switch to this input when the player starts playing",
           "name_phono": "Phono: name",
           "player_phono": "Phono: linked media player",
+          "follow_phono": "Phono: switch to this input when the player starts playing",
           "name_usb": "USB: name",
           "player_usb": "USB: linked media player",
+          "follow_usb": "USB: switch to this input when the player starts playing",
           "name_bluetooth": "Bluetooth: name",
           "player_bluetooth": "Bluetooth: linked media player",
+          "follow_bluetooth": "Bluetooth: switch to this input when the player starts playing",
           "name_bal_xlr": "XLR: name",
           "player_bal_xlr": "XLR: linked media player",
+          "follow_bal_xlr": "XLR: switch to this input when the player starts playing",
           "name_pc_usb": "PC USB: name",
-          "player_pc_usb": "PC USB: linked media player"
+          "player_pc_usb": "PC USB: linked media player",
+          "follow_pc_usb": "PC USB: switch to this input when the player starts playing"
         }
       }
     },

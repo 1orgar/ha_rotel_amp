@@ -12,6 +12,10 @@ DEFAULT_MAX_VOLUME: Final = 96
 CONF_SOURCES: Final = "sources"
 CONF_SOURCE_NAMES: Final = "source_names"
 CONF_SOURCE_PLAYERS: Final = "source_players"
+CONF_SOURCE_FOLLOW: Final = "source_follow"  # inputs whose player triggers auto-switch
+CONF_AUTO_OFF: Final = "auto_off"  # minutes, 0 = disabled
+
+DEFAULT_AUTO_OFF: Final = 0
 CONF_MAX_VOLUME: Final = "max_volume"
 CONF_POLL_INTERVAL: Final = "poll_interval"
 
@@ -22,6 +26,11 @@ FULL_REFRESH_EVERY: Final = 10  # every Nth poll re-queries everything
 SOURCE_NAME_PREFIX: Final = "name_"
 # Prefix of dynamic per-source linked media player fields ("player_coax2" ...)
 SOURCE_PLAYER_PREFIX: Final = "player_"
+# Prefix of per-source "follow playback" switches ("follow_coax2" ...)
+SOURCE_FOLLOW_PREFIX: Final = "follow_"
+
+# Delay between power on and the source command (amp ignores input while booting)
+POWER_ON_SOURCE_TIMEOUT: Final = 20.0
 
 # Connection tuning
 CONNECT_TIMEOUT: Final = 5.0

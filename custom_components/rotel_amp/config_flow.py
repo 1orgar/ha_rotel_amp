@@ -17,16 +17,20 @@ import voluptuous as vol
 
 from .client import async_test_connection
 from .const import (
+    CONF_AUTO_OFF,
     CONF_MAX_VOLUME,
     CONF_POLL_INTERVAL,
+    CONF_SOURCE_FOLLOW,
     CONF_SOURCE_NAMES,
     CONF_SOURCE_PLAYERS,
     CONF_SOURCES,
+    DEFAULT_AUTO_OFF,
     DEFAULT_MAX_VOLUME,
     DEFAULT_NAME,
     DEFAULT_POLL_INTERVAL,
     DEFAULT_PORT,
     DOMAIN,
+    SOURCE_FOLLOW_PREFIX,
     SOURCE_NAME_PREFIX,
     SOURCE_PLAYER_PREFIX,
     SOURCES,
@@ -36,7 +40,10 @@ _LOGGER = logging.getLogger(__name__)
 
 
 def _sources_schema(
-    selected: list[str], max_volume: int, poll_interval: int = DEFAULT_POLL_INTERVAL
+    selected: list[str],
+    max_volume: int,
+    poll_interval: int = DEFAULT_POLL_INTERVAL,
+    auto_off: int = DEFAULT_AUTO_OFF,
 ) -> vol.Schema:
     return vol.Schema(
         {
@@ -66,14 +73,26 @@ def _sources_schema(
                     mode=selector.NumberSelectorMode.BOX,
                 )
             ),
+            vol.Required(CONF_AUTO_OFF, default=auto_off): selector.NumberSelector(
+                selector.NumberSelectorConfig(
+                    min=0,
+                    max=720,
+                    step=1,
+                    unit_of_measurement="min",
+                    mode=selector.NumberSelectorMode.BOX,
+                )
+            ),
         }
     )
 
 
 def _names_schema(
-    sources: list[str], names: dict[str, str], players: dict[str, str]
+    sources: list[str],
+    names: dict[str, str],
+    players: dict[str, str],
+    follow: list[str],
 ) -> vol.Schema:
-    """Per input: name (required) + optional linked media player."""
+    """Per input: name, optional linked media player, follow-playback switch."""
     fields: dict[Any, Any] = {}
     for key in sources:
         fields[
@@ -91,7 +110,17 @@ def _names_schema(
         fields[marker] = selector.EntitySelector(
             selector.EntitySelectorConfig(domain="media_player")
         )
+        fields[
+            vol.Optional(f"{SOURCE_FOLLOW_PREFIX}{key}", default=key in follow)
+        ] = selector.BooleanSelector()
     return vol.Schema(fields)
+
+
+def _follow_from_input(
+    players: dict[str, str], user_input: dict[str, Any]
+) -> list[str]:
+    """Inputs with follow-playback enabled (only those that have a player)."""
+    return [k for k in players if user_input.get(f"{SOURCE_FOLLOW_PREFIX}{k}")]
 
 
 def _names_from_input(sources: list[str], user_input: dict[str, Any]) -> dict[str, str]:
@@ -139,6 +168,7 @@ class RotelConfigFlow(ConfigFlow, domain=DOMAIN):
         self._sources: list[str] = []
         self._max_volume: int = DEFAULT_MAX_VOLUME
         self._poll: int = DEFAULT_POLL_INTERVAL
+        self._auto_off: int = DEFAULT_AUTO_OFF
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -192,11 +222,15 @@ class RotelConfigFlow(ConfigFlow, domain=DOMAIN):
                 self._sources = _parse_sources(user_input)
                 self._max_volume = int(user_input[CONF_MAX_VOLUME])
                 self._poll = int(user_input[CONF_POLL_INTERVAL])
+                self._auto_off = int(user_input[CONF_AUTO_OFF])
                 return await self.async_step_names()
         return self.async_show_form(
             step_id="sources",
             data_schema=_sources_schema(
-                self._sources or list(SOURCES), self._max_volume, self._poll
+                self._sources or list(SOURCES),
+                self._max_volume,
+                self._poll,
+                self._auto_off,
             ),
             errors=errors,
         )
@@ -208,9 +242,11 @@ class RotelConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
         names: dict[str, str] = {}
         players: dict[str, str] = {}
+        follow: list[str] = []
         if user_input is not None:
             names = _names_from_input(self._sources, user_input)
             players = _players_from_input(self._sources, user_input)
+            follow = _follow_from_input(players, user_input)
             errors = _validate_names(names)
             if not errors:
                 return self.async_create_entry(
@@ -220,13 +256,15 @@ class RotelConfigFlow(ConfigFlow, domain=DOMAIN):
                         CONF_SOURCES: self._sources,
                         CONF_SOURCE_NAMES: names,
                         CONF_SOURCE_PLAYERS: players,
+                        CONF_SOURCE_FOLLOW: follow,
                         CONF_MAX_VOLUME: self._max_volume,
                         CONF_POLL_INTERVAL: self._poll,
+                        CONF_AUTO_OFF: self._auto_off,
                     },
                 )
         return self.async_show_form(
             step_id="names",
-            data_schema=_names_schema(self._sources, names, players),
+            data_schema=_names_schema(self._sources, names, players, follow),
             errors=errors,
         )
 
@@ -244,6 +282,7 @@ class RotelOptionsFlow(OptionsFlow):
         self._sources: list[str] = []
         self._max_volume: int = DEFAULT_MAX_VOLUME
         self._poll: int = DEFAULT_POLL_INTERVAL
+        self._auto_off: int = DEFAULT_AUTO_OFF
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
@@ -258,6 +297,7 @@ class RotelOptionsFlow(OptionsFlow):
                 self._sources = _parse_sources(user_input)
                 self._max_volume = int(user_input[CONF_MAX_VOLUME])
                 self._poll = int(user_input[CONF_POLL_INTERVAL])
+                self._auto_off = int(user_input[CONF_AUTO_OFF])
                 return await self.async_step_names()
         return self.async_show_form(
             step_id="init",
@@ -265,6 +305,7 @@ class RotelOptionsFlow(OptionsFlow):
                 options.get(CONF_SOURCES, list(SOURCES)),
                 int(options.get(CONF_MAX_VOLUME, DEFAULT_MAX_VOLUME)),
                 int(options.get(CONF_POLL_INTERVAL, DEFAULT_POLL_INTERVAL)),
+                int(options.get(CONF_AUTO_OFF, DEFAULT_AUTO_OFF)),
             ),
             errors=errors,
         )
@@ -276,9 +317,11 @@ class RotelOptionsFlow(OptionsFlow):
         errors: dict[str, str] = {}
         names = dict(self.config_entry.options.get(CONF_SOURCE_NAMES, {}))
         players = dict(self.config_entry.options.get(CONF_SOURCE_PLAYERS, {}))
+        follow = list(self.config_entry.options.get(CONF_SOURCE_FOLLOW, []))
         if user_input is not None:
             names = _names_from_input(self._sources, user_input)
             players = _players_from_input(self._sources, user_input)
+            follow = _follow_from_input(players, user_input)
             errors = _validate_names(names)
             own = {
                 e.entity_id
@@ -295,13 +338,15 @@ class RotelOptionsFlow(OptionsFlow):
                         CONF_SOURCES: self._sources,
                         CONF_SOURCE_NAMES: names,
                         CONF_SOURCE_PLAYERS: players,
+                        CONF_SOURCE_FOLLOW: follow,
                         CONF_MAX_VOLUME: self._max_volume,
                         CONF_POLL_INTERVAL: self._poll,
+                        CONF_AUTO_OFF: self._auto_off,
                     }
                 )
         return self.async_show_form(
             step_id="names",
-            data_schema=_names_schema(self._sources, names, players),
+            data_schema=_names_schema(self._sources, names, players, follow),
             errors=errors,
         )
 
