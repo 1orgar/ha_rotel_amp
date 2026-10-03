@@ -22,56 +22,90 @@
       },
       "names": {
         "title": "Input names and linked players",
-        "description": "Give the inputs meaningful names (e.g. Coax 2 → Streamer). Optionally link a media player to an input: while that input is selected, the amplifier entity shows its track info and artwork and passes play/pause/next/seek/browse to it. Volume, power and input always stay on the amplifier. With \"switch to this input\" enabled, the amplifier turns on and selects the input when the player starts playing, and other linked players are paused.",
+        "description": "Give the inputs meaningful names (e.g. Coax 2 → Streamer). Optionally link a media player to an input: while that input is selected, the amplifier entity shows its track info and artwork and passes play/pause/next/seek/browse to it. Volume, power and input always stay on the amplifier. With \"switch to this input\" enabled, the amplifier turns on and selects the input when the player starts playing, and other linked players are paused. Relative volume: amp levels that sound equally loud on different inputs, e.g. Player 40 and Alice 20. On an input change the volume is scaled by their ratio.",
         "data": {
           "name_cd": "CD: name",
           "player_cd": "CD: linked media player",
           "follow_cd": "CD: switch to this input when the player starts playing",
           "fixvol_cd": "CD: keep the player volume at 100 %",
+          "refvol_cd": "CD: relative volume for matching (0 = off)",
+          "keepon_cd": "CD: never auto power off on this input",
           "name_coax1": "Coax 1: name",
           "player_coax1": "Coax 1: linked media player",
           "follow_coax1": "Coax 1: switch to this input when the player starts playing",
           "fixvol_coax1": "Coax 1: keep the player volume at 100 %",
+          "refvol_coax1": "Coax 1: relative volume for matching (0 = off)",
+          "keepon_coax1": "Coax 1: never auto power off on this input",
           "name_coax2": "Coax 2: name",
           "player_coax2": "Coax 2: linked media player",
           "follow_coax2": "Coax 2: switch to this input when the player starts playing",
           "fixvol_coax2": "Coax 2: keep the player volume at 100 %",
+          "refvol_coax2": "Coax 2: relative volume for matching (0 = off)",
+          "keepon_coax2": "Coax 2: never auto power off on this input",
           "name_opt1": "Optical 1: name",
           "player_opt1": "Optical 1: linked media player",
           "follow_opt1": "Optical 1: switch to this input when the player starts playing",
           "fixvol_opt1": "Optical 1: keep the player volume at 100 %",
+          "refvol_opt1": "Optical 1: relative volume for matching (0 = off)",
+          "keepon_opt1": "Optical 1: never auto power off on this input",
           "name_opt2": "Optical 2: name",
           "player_opt2": "Optical 2: linked media player",
           "follow_opt2": "Optical 2: switch to this input when the player starts playing",
           "fixvol_opt2": "Optical 2: keep the player volume at 100 %",
+          "refvol_opt2": "Optical 2: relative volume for matching (0 = off)",
+          "keepon_opt2": "Optical 2: never auto power off on this input",
           "name_aux": "Aux: name",
           "player_aux": "Aux: linked media player",
           "follow_aux": "Aux: switch to this input when the player starts playing",
           "fixvol_aux": "Aux: keep the player volume at 100 %",
+          "refvol_aux": "Aux: relative volume for matching (0 = off)",
+          "keepon_aux": "Aux: never auto power off on this input",
           "name_tuner": "Tuner: name",
           "player_tuner": "Tuner: linked media player",
           "follow_tuner": "Tuner: switch to this input when the player starts playing",
           "fixvol_tuner": "Tuner: keep the player volume at 100 %",
+          "refvol_tuner": "Tuner: relative volume for matching (0 = off)",
+          "keepon_tuner": "Tuner: never auto power off on this input",
           "name_phono": "Phono: name",
           "player_phono": "Phono: linked media player",
           "follow_phono": "Phono: switch to this input when the player starts playing",
           "fixvol_phono": "Phono: keep the player volume at 100 %",
+          "refvol_phono": "Phono: relative volume for matching (0 = off)",
+          "keepon_phono": "Phono: never auto power off on this input",
           "name_usb": "USB: name",
           "player_usb": "USB: linked media player",
           "follow_usb": "USB: switch to this input when the player starts playing",
           "fixvol_usb": "USB: keep the player volume at 100 %",
+          "refvol_usb": "USB: relative volume for matching (0 = off)",
+          "keepon_usb": "USB: never auto power off on this input",
           "name_bluetooth": "Bluetooth: name",
           "player_bluetooth": "Bluetooth: linked media player",
           "follow_bluetooth": "Bluetooth: switch to this input when the player starts playing",
           "fixvol_bluetooth": "Bluetooth: keep the player volume at 100 %",
+          "refvol_bluetooth": "Bluetooth: relative volume for matching (0 = off)",
+          "keepon_bluetooth": "Bluetooth: never auto power off on this input",
           "name_bal_xlr": "XLR: name",
           "player_bal_xlr": "XLR: linked media player",
           "follow_bal_xlr": "XLR: switch to this input when the player starts playing",
           "fixvol_bal_xlr": "XLR: keep the player volume at 100 %",
+          "refvol_bal_xlr": "XLR: relative volume for matching (0 = off)",
+          "keepon_bal_xlr": "XLR: never auto power off on this input",
           "name_pc_usb": "PC USB: name",
           "player_pc_usb": "PC USB: linked media player",
           "follow_pc_usb": "PC USB: switch to this input when the player starts playing",
-          "fixvol_pc_usb": "PC USB: keep the player volume at 100 %"
+          "fixvol_pc_usb": "PC USB: keep the player volume at 100 %",
+          "refvol_pc_usb": "PC USB: relative volume for matching (0 = off)",
+          "keepon_pc_usb": "PC USB: never auto power off on this input",
+          "announce_source": "Input for announcements (TTS)",
+          "announce_volume": "Announcement volume, % of the scale (0 = keep current)"
+        }
+      },
+      "reconfigure": {
+        "title": "Change amplifier address",
+        "description": "New IP address or port. Inputs and links are kept.",
+        "data": {
+          "host": "Host",
+          "port": "Port"
         }
       }
     },
@@ -81,10 +115,13 @@
       "no_sources": "Select at least one input",
       "duplicate_name": "Names must be unique",
       "self_player": "Cannot link the amplifier to itself",
-      "no_response": "The device is reachable but does not answer Rotel commands"
+      "no_response": "The device is reachable but does not answer Rotel commands",
+      "announce_needs_player": "The announcement input needs a linked media player"
     },
     "abort": {
-      "already_configured": "This amplifier is already configured"
+      "already_configured": "This amplifier is already configured",
+      "reconfigure_successful": "Address updated",
+      "unique_id_mismatch": "Another amplifier is already configured at this address"
     }
   },
   "options": {
@@ -101,63 +138,90 @@
       },
       "names": {
         "title": "Input names and linked players",
-        "description": "Give the inputs meaningful names (e.g. Coax 2 → Streamer). Optionally link a media player to an input: while that input is selected, the amplifier entity shows its track info and artwork and passes play/pause/next/seek/browse to it. Volume, power and input always stay on the amplifier. With \"switch to this input\" enabled, the amplifier turns on and selects the input when the player starts playing, and other linked players are paused.",
+        "description": "Give the inputs meaningful names (e.g. Coax 2 → Streamer). Optionally link a media player to an input: while that input is selected, the amplifier entity shows its track info and artwork and passes play/pause/next/seek/browse to it. Volume, power and input always stay on the amplifier. With \"switch to this input\" enabled, the amplifier turns on and selects the input when the player starts playing, and other linked players are paused. Relative volume: amp levels that sound equally loud on different inputs, e.g. Player 40 and Alice 20. On an input change the volume is scaled by their ratio.",
         "data": {
           "name_cd": "CD: name",
           "player_cd": "CD: linked media player",
           "follow_cd": "CD: switch to this input when the player starts playing",
           "fixvol_cd": "CD: keep the player volume at 100 %",
+          "refvol_cd": "CD: relative volume for matching (0 = off)",
+          "keepon_cd": "CD: never auto power off on this input",
           "name_coax1": "Coax 1: name",
           "player_coax1": "Coax 1: linked media player",
           "follow_coax1": "Coax 1: switch to this input when the player starts playing",
           "fixvol_coax1": "Coax 1: keep the player volume at 100 %",
+          "refvol_coax1": "Coax 1: relative volume for matching (0 = off)",
+          "keepon_coax1": "Coax 1: never auto power off on this input",
           "name_coax2": "Coax 2: name",
           "player_coax2": "Coax 2: linked media player",
           "follow_coax2": "Coax 2: switch to this input when the player starts playing",
           "fixvol_coax2": "Coax 2: keep the player volume at 100 %",
+          "refvol_coax2": "Coax 2: relative volume for matching (0 = off)",
+          "keepon_coax2": "Coax 2: never auto power off on this input",
           "name_opt1": "Optical 1: name",
           "player_opt1": "Optical 1: linked media player",
           "follow_opt1": "Optical 1: switch to this input when the player starts playing",
           "fixvol_opt1": "Optical 1: keep the player volume at 100 %",
+          "refvol_opt1": "Optical 1: relative volume for matching (0 = off)",
+          "keepon_opt1": "Optical 1: never auto power off on this input",
           "name_opt2": "Optical 2: name",
           "player_opt2": "Optical 2: linked media player",
           "follow_opt2": "Optical 2: switch to this input when the player starts playing",
           "fixvol_opt2": "Optical 2: keep the player volume at 100 %",
+          "refvol_opt2": "Optical 2: relative volume for matching (0 = off)",
+          "keepon_opt2": "Optical 2: never auto power off on this input",
           "name_aux": "Aux: name",
           "player_aux": "Aux: linked media player",
           "follow_aux": "Aux: switch to this input when the player starts playing",
           "fixvol_aux": "Aux: keep the player volume at 100 %",
+          "refvol_aux": "Aux: relative volume for matching (0 = off)",
+          "keepon_aux": "Aux: never auto power off on this input",
           "name_tuner": "Tuner: name",
           "player_tuner": "Tuner: linked media player",
           "follow_tuner": "Tuner: switch to this input when the player starts playing",
           "fixvol_tuner": "Tuner: keep the player volume at 100 %",
+          "refvol_tuner": "Tuner: relative volume for matching (0 = off)",
+          "keepon_tuner": "Tuner: never auto power off on this input",
           "name_phono": "Phono: name",
           "player_phono": "Phono: linked media player",
           "follow_phono": "Phono: switch to this input when the player starts playing",
           "fixvol_phono": "Phono: keep the player volume at 100 %",
+          "refvol_phono": "Phono: relative volume for matching (0 = off)",
+          "keepon_phono": "Phono: never auto power off on this input",
           "name_usb": "USB: name",
           "player_usb": "USB: linked media player",
           "follow_usb": "USB: switch to this input when the player starts playing",
           "fixvol_usb": "USB: keep the player volume at 100 %",
+          "refvol_usb": "USB: relative volume for matching (0 = off)",
+          "keepon_usb": "USB: never auto power off on this input",
           "name_bluetooth": "Bluetooth: name",
           "player_bluetooth": "Bluetooth: linked media player",
           "follow_bluetooth": "Bluetooth: switch to this input when the player starts playing",
           "fixvol_bluetooth": "Bluetooth: keep the player volume at 100 %",
+          "refvol_bluetooth": "Bluetooth: relative volume for matching (0 = off)",
+          "keepon_bluetooth": "Bluetooth: never auto power off on this input",
           "name_bal_xlr": "XLR: name",
           "player_bal_xlr": "XLR: linked media player",
           "follow_bal_xlr": "XLR: switch to this input when the player starts playing",
           "fixvol_bal_xlr": "XLR: keep the player volume at 100 %",
+          "refvol_bal_xlr": "XLR: relative volume for matching (0 = off)",
+          "keepon_bal_xlr": "XLR: never auto power off on this input",
           "name_pc_usb": "PC USB: name",
           "player_pc_usb": "PC USB: linked media player",
           "follow_pc_usb": "PC USB: switch to this input when the player starts playing",
-          "fixvol_pc_usb": "PC USB: keep the player volume at 100 %"
+          "fixvol_pc_usb": "PC USB: keep the player volume at 100 %",
+          "refvol_pc_usb": "PC USB: relative volume for matching (0 = off)",
+          "keepon_pc_usb": "PC USB: never auto power off on this input",
+          "announce_source": "Input for announcements (TTS)",
+          "announce_volume": "Announcement volume, % of the scale (0 = keep current)"
         }
       }
     },
     "error": {
       "no_sources": "Select at least one input",
       "duplicate_name": "Names must be unique",
-      "self_player": "Cannot link the amplifier to itself"
+      "self_player": "Cannot link the amplifier to itself",
+      "announce_needs_player": "The announcement input needs a linked media player"
     }
   },
   "entity": {
@@ -204,6 +268,42 @@
       "test_connection": {
         "name": "Test connection"
       }
+    },
+    "number": {
+      "bass": {
+        "name": "Bass"
+      },
+      "treble": {
+        "name": "Treble"
+      },
+      "balance": {
+        "name": "Balance"
+      }
+    },
+    "switch": {
+      "speaker_a": {
+        "name": "Speakers A"
+      },
+      "speaker_b": {
+        "name": "Speakers B"
+      },
+      "bypass": {
+        "name": "Tone bypass"
+      }
+    },
+    "select": {
+      "dimmer": {
+        "name": "Display dimmer"
+      },
+      "pcusb_class": {
+        "name": "PC-USB audio class"
+      }
+    }
+  },
+  "issues": {
+    "missing_player": {
+      "title": "Linked media player not found",
+      "description": "{title}: these linked media players no longer exist: {players}. Open the integration → Configure and pick other players or clear the fields."
     }
   }
 }

@@ -33,6 +33,30 @@ SOURCE_FOLLOW_PREFIX: Final = "follow_"
 SOURCE_FIXVOL_PREFIX: Final = "fixvol_"
 CONF_SOURCE_FIXED_VOLUME: Final = "source_fixed_volume"
 
+# Per-input "relative volume" for automatic volume matching on input change
+SOURCE_REFVOL_PREFIX: Final = "refvol_"
+CONF_SOURCE_REF_VOLUME: Final = "source_ref_volume"
+# Per-input "never auto power off on this input"
+SOURCE_KEEPON_PREFIX: Final = "keepon_"
+CONF_SOURCE_KEEP_ON: Final = "source_keep_on"
+
+# Announcements (TTS) sent to the amplifier entity
+CONF_ANNOUNCE_SOURCE: Final = "announce_source"
+CONF_ANNOUNCE_VOLUME: Final = "announce_volume"  # % of the volume scale, 0 = keep
+ANNOUNCE_START_TIMEOUT: Final = 10.0  # wait for the player to start speaking
+ANNOUNCE_MAX_DURATION: Final = 120.0
+ANNOUNCE_RESTORE_DELAY: Final = 0.5
+
+# Inputs where the amp reports the sample rate of an incoming signal (freq?)
+DIGITAL_SOURCES: Final = frozenset(
+    {"coax1", "coax2", "opt1", "opt2", "usb", "bluetooth", "pc_usb"}
+)
+NO_SIGNAL_VALUES: Final = frozenset({"", "off", "0", "none", "no_signal", "---"})
+
+# Ignore follow triggers this soon after the previous automatic switch
+FOLLOW_COOLDOWN: Final = 5.0
+EVENT_SOURCE_SWITCHED: Final = "rotel_amp_source_switched"
+
 # Follow playback timings
 POWER_ON_TIMEOUT: Final = 8.0  # max wait for "power=on" after power_on!
 POWER_ON_SETTLE: Final = 0.3  # amp may ignore the input command right after boot
@@ -71,7 +95,9 @@ REPORTED_TO_SOURCE: Final[dict[str, str]] = {
 }
 
 # queried on every poll
-POLL_QUERIES: Final = ("power?", "volume?", "mute?", "source?")
+POLL_QUERIES: Final = ("power?", "volume?", "mute?", "source?", "freq?")
+# re-check the incoming signal this long after an input change
+SIGNAL_CHECK_DELAY: Final = 1.5
 
 # device information, queried once per connection
 DEVICE_QUERIES: Final = ("model?", "version?", "pc_version?", "ip?", "mac?")

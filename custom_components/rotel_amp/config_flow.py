@@ -17,13 +17,17 @@ import voluptuous as vol
 
 from .client import NoResponseError, async_test_connection
 from .const import (
+    CONF_ANNOUNCE_SOURCE,
+    CONF_ANNOUNCE_VOLUME,
     CONF_AUTO_OFF,
     CONF_MAX_VOLUME,
     CONF_POLL_INTERVAL,
     CONF_SOURCE_FIXED_VOLUME,
     CONF_SOURCE_FOLLOW,
+    CONF_SOURCE_KEEP_ON,
     CONF_SOURCE_NAMES,
     CONF_SOURCE_PLAYERS,
+    CONF_SOURCE_REF_VOLUME,
     CONF_SOURCES,
     DEFAULT_AUTO_OFF,
     DEFAULT_MAX_VOLUME,
@@ -33,8 +37,10 @@ from .const import (
     DOMAIN,
     SOURCE_FIXVOL_PREFIX,
     SOURCE_FOLLOW_PREFIX,
+    SOURCE_KEEPON_PREFIX,
     SOURCE_NAME_PREFIX,
     SOURCE_PLAYER_PREFIX,
+    SOURCE_REFVOL_PREFIX,
     SOURCES,
 )
 
@@ -88,14 +94,17 @@ def _sources_schema(
     )
 
 
-def _names_schema(
-    sources: list[str],
-    names: dict[str, str],
-    players: dict[str, str],
-    follow: list[str],
-    fixvol: list[str],
-) -> vol.Schema:
-    """Per input: name, optional linked media player, follow-playback switch."""
+NO_ANNOUNCE = "none"
+
+
+def _names_schema(sources: list[str], opts: dict[str, Any]) -> vol.Schema:
+    """Per input: name, linked player, flags, reference volume; announce settings."""
+    names: dict[str, str] = opts.get(CONF_SOURCE_NAMES, {})
+    players: dict[str, str] = opts.get(CONF_SOURCE_PLAYERS, {})
+    follow: list[str] = opts.get(CONF_SOURCE_FOLLOW, [])
+    fixvol: list[str] = opts.get(CONF_SOURCE_FIXED_VOLUME, [])
+    refvol: dict[str, int] = opts.get(CONF_SOURCE_REF_VOLUME, {})
+    keepon: list[str] = opts.get(CONF_SOURCE_KEEP_ON, [])
     fields: dict[Any, Any] = {}
     for key in sources:
         fields[
@@ -119,7 +128,77 @@ def _names_schema(
         fields[
             vol.Optional(f"{SOURCE_FIXVOL_PREFIX}{key}", default=key in fixvol)
         ] = selector.BooleanSelector()
+        fields[
+            vol.Optional(f"{SOURCE_REFVOL_PREFIX}{key}", default=int(refvol.get(key, 0)))
+        ] = selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=0, max=96, step=1, mode=selector.NumberSelectorMode.BOX
+            )
+        )
+        fields[
+            vol.Optional(f"{SOURCE_KEEPON_PREFIX}{key}", default=key in keepon)
+        ] = selector.BooleanSelector()
+    fields[
+        vol.Optional(
+            CONF_ANNOUNCE_SOURCE,
+            default=opts.get(CONF_ANNOUNCE_SOURCE) or NO_ANNOUNCE,
+        )
+    ] = selector.SelectSelector(
+        selector.SelectSelectorConfig(
+            options=[selector.SelectOptionDict(value=NO_ANNOUNCE, label="—")]
+            + [
+                selector.SelectOptionDict(value=k, label=names.get(k, SOURCES[k][2]))
+                for k in sources
+            ],
+            mode=selector.SelectSelectorMode.DROPDOWN,
+        )
+    )
+    fields[
+        vol.Optional(
+            CONF_ANNOUNCE_VOLUME, default=int(opts.get(CONF_ANNOUNCE_VOLUME, 0))
+        )
+    ] = selector.NumberSelector(
+        selector.NumberSelectorConfig(
+            min=0,
+            max=100,
+            step=1,
+            unit_of_measurement="%",
+            mode=selector.NumberSelectorMode.SLIDER,
+        )
+    )
     return vol.Schema(fields)
+
+
+def _names_options(
+    sources: list[str], user_input: dict[str, Any]
+) -> tuple[dict[str, Any], dict[str, str]]:
+    """Parse the per-input step into options and validation errors."""
+    names = _names_from_input(sources, user_input)
+    players = _players_from_input(sources, user_input)
+    errors = _validate_names(names)
+    announce = user_input.get(CONF_ANNOUNCE_SOURCE) or NO_ANNOUNCE
+    if announce != NO_ANNOUNCE and announce not in players:
+        errors[CONF_ANNOUNCE_SOURCE] = "announce_needs_player"
+    refvol = {
+        k: int(v)
+        for k in sources
+        if (v := user_input.get(f"{SOURCE_REFVOL_PREFIX}{k}")) and int(v) > 0
+    }
+    options = {
+        CONF_SOURCE_NAMES: names,
+        CONF_SOURCE_PLAYERS: players,
+        CONF_SOURCE_FOLLOW: _flags_from_input(players, user_input, SOURCE_FOLLOW_PREFIX),
+        CONF_SOURCE_FIXED_VOLUME: _flags_from_input(
+            players, user_input, SOURCE_FIXVOL_PREFIX
+        ),
+        CONF_SOURCE_REF_VOLUME: refvol,
+        CONF_SOURCE_KEEP_ON: [
+            k for k in sources if user_input.get(f"{SOURCE_KEEPON_PREFIX}{k}")
+        ],
+        CONF_ANNOUNCE_SOURCE: None if announce == NO_ANNOUNCE else announce,
+        CONF_ANNOUNCE_VOLUME: int(user_input.get(CONF_ANNOUNCE_VOLUME) or 0),
+    }
+    return options, errors
 
 
 def _flags_from_input(
@@ -186,6 +265,8 @@ class RotelConfigFlow(ConfigFlow, domain=DOMAIN):
             port = int(user_input[CONF_PORT])
             await self.async_set_unique_id(f"{host}:{port}")
             self._abort_if_unique_id_configured()
+            # an entry moved to this address by reconfigure keeps its old unique_id
+            self._async_abort_entries_match({CONF_HOST: host, CONF_PORT: port})
             try:
                 info = await async_test_connection(host, port)
             except (OSError, TimeoutError):
@@ -249,26 +330,16 @@ class RotelConfigFlow(ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """Rename selected inputs."""
         errors: dict[str, str] = {}
-        names: dict[str, str] = {}
-        players: dict[str, str] = {}
-        follow: list[str] = []
-        fixvol: list[str] = []
+        opts: dict[str, Any] = {}
         if user_input is not None:
-            names = _names_from_input(self._sources, user_input)
-            players = _players_from_input(self._sources, user_input)
-            follow = _flags_from_input(players, user_input, SOURCE_FOLLOW_PREFIX)
-            fixvol = _flags_from_input(players, user_input, SOURCE_FIXVOL_PREFIX)
-            errors = _validate_names(names)
+            opts, errors = _names_options(self._sources, user_input)
             if not errors:
                 return self.async_create_entry(
                     title=self._data[CONF_NAME],
                     data=self._data,
                     options={
                         CONF_SOURCES: self._sources,
-                        CONF_SOURCE_NAMES: names,
-                        CONF_SOURCE_PLAYERS: players,
-                        CONF_SOURCE_FOLLOW: follow,
-                        CONF_SOURCE_FIXED_VOLUME: fixvol,
+                        **opts,
                         CONF_MAX_VOLUME: self._max_volume,
                         CONF_POLL_INTERVAL: self._poll,
                         CONF_AUTO_OFF: self._auto_off,
@@ -276,7 +347,52 @@ class RotelConfigFlow(ConfigFlow, domain=DOMAIN):
                 )
         return self.async_show_form(
             step_id="names",
-            data_schema=_names_schema(self._sources, names, players, follow, fixvol),
+            data_schema=_names_schema(self._sources, opts),
+            errors=errors,
+        )
+
+    async def async_step_reconfigure(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Change host / port without losing the input configuration."""
+        entry = self._get_reconfigure_entry()
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            host = user_input[CONF_HOST].strip()
+            port = int(user_input[CONF_PORT])
+            try:
+                await async_test_connection(host, port)
+            except (OSError, TimeoutError):
+                errors["base"] = "cannot_connect"
+            except NoResponseError:
+                errors["base"] = "no_response"
+            except Exception:  # noqa: BLE001
+                _LOGGER.exception("Unexpected error")
+                errors["base"] = "unknown"
+            else:
+                # The entry unique_id (and therefore every entity's unique_id
+                # and entity_id) is kept, so automations keep working.
+                for other in self._async_current_entries(include_ignore=False):
+                    if (
+                        other.entry_id != entry.entry_id
+                        and other.data.get(CONF_HOST) == host
+                        and other.data.get(CONF_PORT) == port
+                    ):
+                        return self.async_abort(reason="already_configured")
+                return self.async_update_reload_and_abort(
+                    entry, data_updates={CONF_HOST: host, CONF_PORT: port}
+                )
+        schema = vol.Schema(
+            {
+                vol.Required(CONF_HOST, default=entry.data[CONF_HOST]): str,
+                vol.Required(CONF_PORT, default=entry.data[CONF_PORT]): vol.All(
+                    vol.Coerce(int), vol.Range(min=1, max=65535)
+                ),
+            }
+        )
+        return self.async_show_form(
+            step_id="reconfigure",
+            data_schema=self.add_suggested_values_to_schema(schema, user_input),
             errors=errors,
         )
 
@@ -327,16 +443,10 @@ class RotelOptionsFlow(OptionsFlow):
     ) -> ConfigFlowResult:
         """Rename inputs."""
         errors: dict[str, str] = {}
-        names = dict(self.config_entry.options.get(CONF_SOURCE_NAMES, {}))
-        players = dict(self.config_entry.options.get(CONF_SOURCE_PLAYERS, {}))
-        follow = list(self.config_entry.options.get(CONF_SOURCE_FOLLOW, []))
-        fixvol = list(self.config_entry.options.get(CONF_SOURCE_FIXED_VOLUME, []))
+        opts: dict[str, Any] = dict(self.config_entry.options)
         if user_input is not None:
-            names = _names_from_input(self._sources, user_input)
-            players = _players_from_input(self._sources, user_input)
-            follow = _flags_from_input(players, user_input, SOURCE_FOLLOW_PREFIX)
-            fixvol = _flags_from_input(players, user_input, SOURCE_FIXVOL_PREFIX)
-            errors = _validate_names(names)
+            opts, errors = _names_options(self._sources, user_input)
+            players = opts[CONF_SOURCE_PLAYERS]
             own = {
                 e.entity_id
                 for e in er.async_entries_for_config_entry(
@@ -350,10 +460,7 @@ class RotelOptionsFlow(OptionsFlow):
                 return self.async_create_entry(
                     data={
                         CONF_SOURCES: self._sources,
-                        CONF_SOURCE_NAMES: names,
-                        CONF_SOURCE_PLAYERS: players,
-                        CONF_SOURCE_FOLLOW: follow,
-                        CONF_SOURCE_FIXED_VOLUME: fixvol,
+                        **opts,
                         CONF_MAX_VOLUME: self._max_volume,
                         CONF_POLL_INTERVAL: self._poll,
                         CONF_AUTO_OFF: self._auto_off,
@@ -361,7 +468,7 @@ class RotelOptionsFlow(OptionsFlow):
                 )
         return self.async_show_form(
             step_id="names",
-            data_schema=_names_schema(self._sources, names, players, follow, fixvol),
+            data_schema=_names_schema(self._sources, opts),
             errors=errors,
         )
 

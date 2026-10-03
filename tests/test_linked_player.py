@@ -60,7 +60,7 @@ async def test_state_and_metadata_from_linked_player(
     assert st.attributes["media_title"] == "Song"
     assert st.attributes["media_artist"] == "Artist"
     assert st.attributes["entity_picture"] == "/api/media_player_proxy/x"
-    assert st.attributes["volume_level"] == 0.3  # volume always from the amp
+    assert st.attributes["amp_volume"] == 30  # volume always from the amp
     assert st.attributes["linked_player"] == CHILD
     feats = F(st.attributes["supported_features"])
     assert {F.SEEK, F.PLAY_MEDIA, F.SELECT_SOURCE, F.VOLUME_SET} <= set(feats)

@@ -38,7 +38,15 @@ class FakeRotel:
             "model": "RA-1572",
             "version": "V1.4.3",
             "mac": "00:11:22:33:44:55",
+            "freq": "off",
+            "bass": "000",
+            "treble": "000",
+            "balance": "000",
+            "speaker": "a",
+            "dimmer": "0",
+            "bypass": "off",
         }
+        self.signals = {}
         self.ignore_source_commands = 0  # simulate amp booting
 
     async def start(self) -> None:
@@ -109,15 +117,40 @@ class FakeRotel:
             self.state["power"] = "standby"
             return "power=standby$"
         if name.startswith("vol_") and name[4:].isdigit():
-            self.state["volume"] = name[4:]
+            self.state["volume"] = str(int(name[4:]))
             return f"volume={self.state['volume']}$"
         if name in ("coax1", "coax2", "opt1", "cd"):
             if self.ignore_source_commands > 0:
                 self.ignore_source_commands -= 1
                 return None
             self.state["source"] = name
+            # signal disappears on input change until the test sets it again
+            self.state["freq"] = self.signals.get(name, "off")
             return f"source={name}$"
+        for tone in ("bass", "treble"):
+            if name.startswith(f"{tone}_"):
+                self.state[tone] = name.split("_", 1)[1]
+                return f"{tone}={self.state[tone]}$"
+        if name.startswith("balance_"):
+            value = name.split("_", 1)[1].upper()
+            self.state["balance"] = value
+            return f"balance={value}$"
+        if name.startswith("speaker_") and name.endswith(("_on", "_off")):
+            side, onoff = name.split("_")[1:3]
+            on = set(self.state.get("speaker", "").replace("off", "").split("_")) - {""}
+            on = on | {side} if onoff == "on" else on - {side}
+            self.state["speaker"] = "_".join(sorted(on)) or "off"
+            return f"speaker={self.state['speaker']}$"
+        if name.startswith("dimmer_"):
+            self.state["dimmer"] = name.split("_", 1)[1]
+            return f"dimmer={self.state['dimmer']}$"
+        if name in ("bypass_on", "bypass_off"):
+            self.state["bypass"] = name.split("_")[1]
+            return f"bypass={self.state['bypass']}$"
         return None
+
+    # sample rate reported per input (missing = no signal)
+    signals: dict[str, str] = {}
 
 
 @pytest.fixture

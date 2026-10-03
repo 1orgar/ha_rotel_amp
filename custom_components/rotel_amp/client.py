@@ -130,6 +130,8 @@ class RotelClient:
         self._update_callbacks: list[UpdateCallback] = []
         self._connection_callbacks: list[ConnectionCallback] = []
         self._pong: asyncio.Future[None] | None = None
+        # last value of every key reported by the amp (bass, speaker, ...)
+        self.values: dict[str, str] = {}
         # diagnostics
         self.device_info: dict[str, str] = {}
         self.connected_since: datetime | None = None
@@ -359,5 +361,6 @@ class RotelClient:
                         self._pong.set_result(None)
                 if key in DEVICE_INFO_KEYS:
                     self.device_info["ip" if key == "ipaddress" else key] = value
+                self.values[key] = value
                 self._notify(key, value)
 

@@ -40,8 +40,28 @@ TEXT = {
         "player": "{0}: linked media player",
         "follow": "{0}: switch to this input when the player starts playing",
         "fixvol": "{0}: keep the player volume at 100 %",
+        "refvol": "{0}: relative volume for matching (0 = off)",
+        "keepon": "{0}: never auto power off on this input",
         "self_player": "Cannot link the amplifier to itself",
         "auto_off": "Auto power off when nothing plays, min (0 = off)",
+        "announce_source": "Input for announcements (TTS)",
+        "announce_volume": "Announcement volume, % of the scale (0 = keep current)",
+        "announce_needs_player": "The announcement input needs a linked media player",
+        "names_desc_extra": (
+            " Relative volume: amp levels that sound equally loud on different "
+            "inputs, e.g. Player 40 and Alice 20. On an input change the volume is "
+            "scaled by their ratio."
+        ),
+        "reconfigure_title": "Change amplifier address",
+        "reconfigure_desc": "New IP address or port. Inputs and links are kept.",
+        "reconfigure_successful": "Address updated",
+        "unique_id_mismatch": "Another amplifier is already configured at this address",
+        "issue_title": "Linked media player not found",
+        "issue_desc": (
+            "{title}: these linked media players no longer exist: {players}. "
+            "Open the integration → Configure and pick other players or clear "
+            "the fields."
+        ),
     },
     "ru": {
         "names_title": "Названия входов и связанные плееры",
@@ -58,8 +78,28 @@ TEXT = {
         "player": "{0}: связанный media player",
         "follow": "{0}: переключаться на этот вход, когда плеер начинает играть",
         "fixvol": "{0}: держать громкость плеера на 100 %",
+        "refvol": "{0}: относительная громкость для подстройки (0 = выкл)",
+        "keepon": "{0}: не выключать автоматически на этом входе",
         "self_player": "Нельзя связать усилитель с самим собой",
         "auto_off": "Автовыключение, если ничего не играет, мин (0 = выкл)",
+        "announce_source": "Вход для объявлений (TTS)",
+        "announce_volume": "Громкость объявлений, % шкалы (0 = не менять)",
+        "announce_needs_player": "У входа для объявлений должен быть связанный media player",
+        "names_desc_extra": (
+            " Относительная громкость — уровни усилителя, при которых разные входы "
+            "звучат одинаково громко, например Плеер 40 и Алиса 20. При смене "
+            "входа громкость пересчитывается по их отношению."
+        ),
+        "reconfigure_title": "Изменить адрес усилителя",
+        "reconfigure_desc": "Новый IP-адрес или порт. Входы и связи сохранятся.",
+        "reconfigure_successful": "Адрес обновлён",
+        "unique_id_mismatch": "По этому адресу уже настроен другой усилитель",
+        "issue_title": "Связанный media player не найден",
+        "issue_desc": (
+            "{title}: эти связанные плееры больше не существуют: {players}. "
+            "Откройте интеграцию → «Настроить» и выберите другие плееры или "
+            "очистите поля."
+        ),
     },
 }
 
@@ -80,6 +120,10 @@ ENTITY = {
             "last_error": "Last connection error",
         },
         "button": {"test_connection": "Test connection"},
+        "number": {"bass": "Bass", "treble": "Treble", "balance": "Balance"},
+        "switch": {"speaker_a": "Speakers A", "speaker_b": "Speakers B",
+                   "bypass": "Tone bypass"},
+        "select": {"dimmer": "Display dimmer", "pcusb_class": "PC-USB audio class"},
         "connection_state": {"connected": "Connected", "disconnected": "Disconnected"},
         "no_response": "The device is reachable but does not answer Rotel commands",
     },
@@ -98,6 +142,11 @@ ENTITY = {
             "last_error": "Последняя ошибка соединения",
         },
         "button": {"test_connection": "Проверить соединение"},
+        "number": {"bass": "Низкие частоты", "treble": "Высокие частоты",
+                   "balance": "Баланс"},
+        "switch": {"speaker_a": "Колонки A", "speaker_b": "Колонки B",
+                   "bypass": "Обход тембров"},
+        "select": {"dimmer": "Яркость дисплея", "pcusb_class": "Класс PC-USB аудио"},
         "connection_state": {"connected": "Подключено", "disconnected": "Отключено"},
         "no_response": "Устройство доступно, но не отвечает на команды Rotel",
     },
@@ -113,20 +162,41 @@ def _patch(path: Path, lang: str, sources: dict[str, str]) -> None:
         fields[f"player_{key}"] = t["player"].format(default)
         fields[f"follow_{key}"] = t["follow"].format(default)
         fields[f"fixvol_{key}"] = t["fixvol"].format(default)
+        fields[f"refvol_{key}"] = t["refvol"].format(default)
+        fields[f"keepon_{key}"] = t["keepon"].format(default)
+    fields["announce_source"] = t["announce_source"]
+    fields["announce_volume"] = t["announce_volume"]
     for section, first in (("config", "sources"), ("options", "init")):
         step = data[section]["step"]["names"]
         step["title"] = t["names_title"]
-        step["description"] = t["names_desc"]
+        step["description"] = t["names_desc"] + t["names_desc_extra"]
         step["data"] = fields
         data[section]["step"][first]["data"]["auto_off"] = t["auto_off"]
-        data[section].setdefault("error", {})["self_player"] = t["self_player"]
+        errors = data[section].setdefault("error", {})
+        errors["self_player"] = t["self_player"]
+        errors["announce_needs_player"] = t["announce_needs_player"]
     e = ENTITY[lang]
-    data["config"]["error"]["no_response"] = e["no_response"]
+    config = data["config"]
+    config["error"]["no_response"] = e["no_response"]
+    config["step"]["reconfigure"] = {
+        "title": t["reconfigure_title"],
+        "description": t["reconfigure_desc"],
+        "data": dict(config["step"]["user"]["data"]),
+    }
+    config["step"]["reconfigure"]["data"].pop("name", None)
+    config.setdefault("abort", {})["reconfigure_successful"] = t["reconfigure_successful"]
+    config["abort"]["unique_id_mismatch"] = t["unique_id_mismatch"]
     sensors = {k: {"name": v} for k, v in e["sensor"].items()}
     sensors["connection"]["state"] = e["connection_state"]
     data["entity"] = {
         "sensor": sensors,
-        "button": {k: {"name": v} for k, v in e["button"].items()},
+        **{
+            platform: {k: {"name": v} for k, v in e[platform].items()}
+            for platform in ("button", "number", "switch", "select")
+        },
+    }
+    data["issues"] = {
+        "missing_player": {"title": t["issue_title"], "description": t["issue_desc"]}
     }
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
