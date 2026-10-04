@@ -49,16 +49,26 @@ Set **POWER OPTION = Quick** on the amplifier, otherwise it is not reachable ove
 
 *Settings → Devices & services → Add integration → Rotel Amplifier (TCP)*:
 
-1. Host, port (default `9590`), name.
-2. Inputs you use, maximum volume, poll interval (`0` disables polling), auto power off (`0` disables it).
-3. For each input:
-   - name;
-   - optional linked media player, with the "switch to this input" and "keep volume at 100 %" options;
-   - relative volume and "never auto power off".
+1. **Address:** host, port (default `9590`), name.
+2. **Inputs and general settings:** the inputs you use. Grouped below them:
+   - *Volume* — maximum volume;
+   - *Auto power off* — minutes (`0` = off);
+   - *Advanced* (collapsed) — poll interval.
+3. **One page per input**, in order:
+   - name and linked media player;
+   - *Linked player* — "switch to this input" and "keep volume at 100 %". This section appears only after you choose a player and press **Submit**, so the page shows a second time;
+   - *Volume matching and power* (collapsed) — relative volume and "never auto power off".
+4. **Announcements** — input and volume for TTS. Shown only if at least one input has a linked player.
 
-   Plus the input and volume used for announcements.
+Every field has an explanation underneath it.
 
-You can change all of this later with **Configure**. To change the IP address or port, use **⋮ → Reconfigure**. Inputs, links and entity IDs are kept.
+To change the settings later, open **Configure**. A menu opens:
+- *Inputs, volume and auto power off*;
+- *Configure an input* — a list of inputs with a summary of their settings;
+- *Announcements*;
+- *Save* — applies all changes at once; the integration reloads.
+
+To change the IP address or port, use **⋮ → Reconfigure**. Inputs, links and entity IDs are kept.
 
 ## Volume
 The Home Assistant volume slider covers **0…maximum volume** of the amplifier. With a maximum of 60, 100 % in HA is 60 on the amplifier display, 50 % is 30, and one volume step is one amplifier step. If the volume is raised above the limit on the front panel or remote, it is pulled back to the limit. The `amp_volume` attribute shows the raw amplifier value.
@@ -196,6 +206,8 @@ ruff check custom_components tests
 pytest
 ```
 The tests run against an amplifier emulator and cover reboot, a silent amplifier, startup while the amplifier is offline, and polling.
+
+UI texts live in `scripts/translations_en.py` and `scripts/translations_ru.py`. Run `python scripts/gen_translations.py` to build `strings.json` and `translations/*.json`. The tests fail if any form field, section or menu item has no label or description.
 
 ### Releases
 The version comes from `custom_components/rotel_amp/manifest.json`. When a new version is pushed to `main`, the **Tag & release** workflow creates the tag `v<version>` and a GitHub Release with `rotel_amp.zip`.

@@ -3,225 +3,250 @@
     "step": {
       "user": {
         "title": "Rotel amplifier",
-        "description": "Enter the amplifier network address. Set POWER OPTION to \"Quick\" on the amplifier so it stays reachable in standby.",
+        "description": "Set **POWER OPTION = Quick** on the amplifier so it stays reachable over the network in standby.",
         "data": {
           "host": "Host",
           "port": "Port",
           "name": "Name"
+        },
+        "data_description": {
+          "host": "IP address or host name of the amplifier. Give it a fixed address (DHCP reservation) in your router.",
+          "port": "TCP control port. Rotel uses 9590; change only if you know why.",
+          "name": "Device name in Home Assistant, e.g. Living room amplifier."
         }
       },
       "sources": {
-        "title": "Inputs",
-        "description": "Select the inputs you actually use. Only these will be shown in Home Assistant.",
+        "title": "Inputs and general settings",
+        "description": "Next you will set up each selected input.",
         "data": {
-          "sources": "Inputs",
-          "max_volume": "Maximum volume (1-96)",
-          "poll_interval": "Status poll interval, s (0 = off)",
-          "auto_off": "Auto power off when nothing plays, min (0 = off)"
+          "sources": "Inputs in use"
+        },
+        "data_description": {
+          "sources": "Only these inputs appear in the source list. Unused inputs are hidden; if one is selected on the front panel it is shown with its default name."
+        },
+        "sections": {
+          "volume": {
+            "name": "Volume",
+            "data": {
+              "max_volume": "Maximum volume"
+            },
+            "data_description": {
+              "max_volume": "Amplifier level (1–96) that equals 100 % in Home Assistant. The slider covers 0…this value, and anything set above it on the remote or front panel is pulled back to it."
+            }
+          },
+          "power_volume": {
+            "name": "Auto power off",
+            "data": {
+              "auto_off": "Auto power off after, min"
+            },
+            "data_description": {
+              "auto_off": "Turn the amplifier off after it has been on with nothing playing for this many minutes. 0 = never. Playing means: the linked player of the current input is playing, or a digital input carries a signal. Analog inputs without a player never count as playing, so mark them \"Never auto power off\"."
+            }
+          },
+          "advanced": {
+            "name": "Advanced",
+            "data": {
+              "poll_interval": "Status poll interval, s"
+            },
+            "data_description": {
+              "poll_interval": "The amplifier reports changes by itself; polling only catches missed updates and the signal on digital inputs. Default 30 s. 0 = off."
+            }
+          }
         }
       },
-      "names": {
-        "title": "Input names and linked players",
-        "description": "Give the inputs meaningful names (e.g. Coax 2 → Streamer). Optionally link a media player to an input: while that input is selected, the amplifier entity shows its track info and artwork and passes play/pause/next/seek/browse to it. Volume, power and input always stay on the amplifier. With \"switch to this input\" enabled, the amplifier turns on and selects the input when the player starts playing, and other linked players are paused. Relative volume: amp levels that sound equally loud on different inputs, e.g. Player 40 and Alice 20. On an input change the volume is scaled by their ratio.",
+      "input": {
+        "title": "Input {label}",
+        "description": "Settings of the **{input}** input. Pick a linked media player and press Submit to see its options.",
         "data": {
-          "name_cd": "CD: name",
-          "player_cd": "CD: linked media player",
-          "follow_cd": "CD: switch to this input when the player starts playing",
-          "fixvol_cd": "CD: keep the player volume at 100 %",
-          "refvol_cd": "CD: relative volume for matching (0 = off)",
-          "keepon_cd": "CD: never auto power off on this input",
-          "name_coax1": "Coax 1: name",
-          "player_coax1": "Coax 1: linked media player",
-          "follow_coax1": "Coax 1: switch to this input when the player starts playing",
-          "fixvol_coax1": "Coax 1: keep the player volume at 100 %",
-          "refvol_coax1": "Coax 1: relative volume for matching (0 = off)",
-          "keepon_coax1": "Coax 1: never auto power off on this input",
-          "name_coax2": "Coax 2: name",
-          "player_coax2": "Coax 2: linked media player",
-          "follow_coax2": "Coax 2: switch to this input when the player starts playing",
-          "fixvol_coax2": "Coax 2: keep the player volume at 100 %",
-          "refvol_coax2": "Coax 2: relative volume for matching (0 = off)",
-          "keepon_coax2": "Coax 2: never auto power off on this input",
-          "name_opt1": "Optical 1: name",
-          "player_opt1": "Optical 1: linked media player",
-          "follow_opt1": "Optical 1: switch to this input when the player starts playing",
-          "fixvol_opt1": "Optical 1: keep the player volume at 100 %",
-          "refvol_opt1": "Optical 1: relative volume for matching (0 = off)",
-          "keepon_opt1": "Optical 1: never auto power off on this input",
-          "name_opt2": "Optical 2: name",
-          "player_opt2": "Optical 2: linked media player",
-          "follow_opt2": "Optical 2: switch to this input when the player starts playing",
-          "fixvol_opt2": "Optical 2: keep the player volume at 100 %",
-          "refvol_opt2": "Optical 2: relative volume for matching (0 = off)",
-          "keepon_opt2": "Optical 2: never auto power off on this input",
-          "name_aux": "Aux: name",
-          "player_aux": "Aux: linked media player",
-          "follow_aux": "Aux: switch to this input when the player starts playing",
-          "fixvol_aux": "Aux: keep the player volume at 100 %",
-          "refvol_aux": "Aux: relative volume for matching (0 = off)",
-          "keepon_aux": "Aux: never auto power off on this input",
-          "name_tuner": "Tuner: name",
-          "player_tuner": "Tuner: linked media player",
-          "follow_tuner": "Tuner: switch to this input when the player starts playing",
-          "fixvol_tuner": "Tuner: keep the player volume at 100 %",
-          "refvol_tuner": "Tuner: relative volume for matching (0 = off)",
-          "keepon_tuner": "Tuner: never auto power off on this input",
-          "name_phono": "Phono: name",
-          "player_phono": "Phono: linked media player",
-          "follow_phono": "Phono: switch to this input when the player starts playing",
-          "fixvol_phono": "Phono: keep the player volume at 100 %",
-          "refvol_phono": "Phono: relative volume for matching (0 = off)",
-          "keepon_phono": "Phono: never auto power off on this input",
-          "name_usb": "USB: name",
-          "player_usb": "USB: linked media player",
-          "follow_usb": "USB: switch to this input when the player starts playing",
-          "fixvol_usb": "USB: keep the player volume at 100 %",
-          "refvol_usb": "USB: relative volume for matching (0 = off)",
-          "keepon_usb": "USB: never auto power off on this input",
-          "name_bluetooth": "Bluetooth: name",
-          "player_bluetooth": "Bluetooth: linked media player",
-          "follow_bluetooth": "Bluetooth: switch to this input when the player starts playing",
-          "fixvol_bluetooth": "Bluetooth: keep the player volume at 100 %",
-          "refvol_bluetooth": "Bluetooth: relative volume for matching (0 = off)",
-          "keepon_bluetooth": "Bluetooth: never auto power off on this input",
-          "name_bal_xlr": "XLR: name",
-          "player_bal_xlr": "XLR: linked media player",
-          "follow_bal_xlr": "XLR: switch to this input when the player starts playing",
-          "fixvol_bal_xlr": "XLR: keep the player volume at 100 %",
-          "refvol_bal_xlr": "XLR: relative volume for matching (0 = off)",
-          "keepon_bal_xlr": "XLR: never auto power off on this input",
-          "name_pc_usb": "PC USB: name",
-          "player_pc_usb": "PC USB: linked media player",
-          "follow_pc_usb": "PC USB: switch to this input when the player starts playing",
-          "fixvol_pc_usb": "PC USB: keep the player volume at 100 %",
-          "refvol_pc_usb": "PC USB: relative volume for matching (0 = off)",
-          "keepon_pc_usb": "PC USB: never auto power off on this input",
-          "announce_source": "Input for announcements (TTS)",
-          "announce_volume": "Announcement volume, % of the scale (0 = keep current)"
+          "name": "Name",
+          "player": "Linked media player"
+        },
+        "data_description": {
+          "name": "Shown in the source list instead of \"{input}\", e.g. Streamer, TV.",
+          "player": "The media player connected to this input (streamer, smart speaker, Chromecast…). While this input is selected the amplifier entity shows its track, artwork and state, and play / pause / next / seek / browse go to it. Power, volume and input stay on the amplifier. Leave empty if nothing controllable is connected."
+        },
+        "sections": {
+          "player_options": {
+            "name": "Linked player",
+            "data": {
+              "follow": "Switch to this input when the player starts playing",
+              "fixed_volume": "Keep the player volume at 100 %"
+            },
+            "data_description": {
+              "follow": "When the player starts playing, the amplifier turns on if needed, selects this input and pauses the other linked players. With this option on any input, only the current input's player may play. A second player starting within 5 s of an automatic switch is paused instead (no ping-pong).",
+              "fixed_volume": "Volume is controlled on the amplifier, so the player should always output full level. Its volume is set to 100 % and unmuted at start-up and whenever someone changes it."
+            }
+          },
+          "power_volume": {
+            "name": "Volume matching and power",
+            "data": {
+              "ref_volume": "Relative volume",
+              "keep_on": "Never auto power off on this input"
+            },
+            "data_description": {
+              "ref_volume": "Amplifier level at which this input sounds as loud as your other inputs, e.g. Streamer 40, Yandex station 20. When switching between two inputs that both have a value, the volume is scaled by their ratio (Streamer at 30 → station at 15). 0 = don't adjust.",
+              "keep_on": "Auto power off never triggers while this input is selected. Use it for turntables, CD players and other analog sources the integration cannot see playing."
+            }
+          }
+        }
+      },
+      "announce": {
+        "title": "Announcements (TTS)",
+        "description": "Text-to-speech and Assist can speak through the amplifier. It switches to the chosen input, the linked player speaks, then the previous input, volume and power state are restored.",
+        "data": {
+          "announce_source": "Input for announcements",
+          "announce_volume": "Announcement volume"
+        },
+        "data_description": {
+          "announce_source": "Only inputs with a linked player can be chosen. — = announcements are not supported.",
+          "announce_volume": "In % of the volume scale (100 % = maximum volume). 0 = keep the current volume."
         }
       },
       "reconfigure": {
         "title": "Change amplifier address",
-        "description": "New IP address or port. Inputs and links are kept.",
+        "description": "New IP address or port. Inputs, links and entity IDs are kept.",
         "data": {
           "host": "Host",
           "port": "Port"
+        },
+        "data_description": {
+          "host": "IP address or host name of the amplifier. Give it a fixed address (DHCP reservation) in your router.",
+          "port": "TCP control port. Rotel uses 9590; change only if you know why."
         }
       }
     },
     "error": {
-      "cannot_connect": "Failed to connect to the amplifier",
+      "cannot_connect": "Failed to connect to the amplifier. Check the address and that POWER OPTION is set to Quick.",
+      "no_response": "The device is reachable but does not answer Rotel commands.",
       "unknown": "Unexpected error",
       "no_sources": "Select at least one input",
-      "duplicate_name": "Names must be unique",
-      "self_player": "Cannot link the amplifier to itself",
-      "no_response": "The device is reachable but does not answer Rotel commands",
-      "announce_needs_player": "The announcement input needs a linked media player"
+      "duplicate_name": "Another input already has this name",
+      "self_player": "Cannot link the amplifier to itself"
     },
     "abort": {
       "already_configured": "This amplifier is already configured",
-      "reconfigure_successful": "Address updated",
-      "unique_id_mismatch": "Another amplifier is already configured at this address"
+      "reconfigure_successful": "Address updated"
     }
   },
   "options": {
     "step": {
       "init": {
-        "title": "Inputs",
-        "description": "Select the inputs you actually use.",
-        "data": {
-          "sources": "Inputs",
-          "max_volume": "Maximum volume (1-96)",
-          "poll_interval": "Status poll interval, s (0 = off)",
-          "auto_off": "Auto power off when nothing plays, min (0 = off)"
+        "title": "Rotel settings",
+        "description": "{summary}{unsaved}Choose what to change, then **Save**.",
+        "menu_options": {
+          "general": "Inputs, volume and auto power off",
+          "inputs": "Configure an input",
+          "announce": "Announcements (TTS)",
+          "save": "Save"
+        },
+        "menu_option_descriptions": {
+          "general": "Which inputs are used, maximum volume, auto power off, polling",
+          "inputs": "Name, linked player, auto switching, fixed and relative volume",
+          "announce": "Input and volume for text-to-speech",
+          "save": "Apply the changes (the integration reloads)"
         }
       },
-      "names": {
-        "title": "Input names and linked players",
-        "description": "Give the inputs meaningful names (e.g. Coax 2 → Streamer). Optionally link a media player to an input: while that input is selected, the amplifier entity shows its track info and artwork and passes play/pause/next/seek/browse to it. Volume, power and input always stay on the amplifier. With \"switch to this input\" enabled, the amplifier turns on and selects the input when the player starts playing, and other linked players are paused. Relative volume: amp levels that sound equally loud on different inputs, e.g. Player 40 and Alice 20. On an input change the volume is scaled by their ratio.",
+      "general": {
+        "title": "Inputs and general settings",
         "data": {
-          "name_cd": "CD: name",
-          "player_cd": "CD: linked media player",
-          "follow_cd": "CD: switch to this input when the player starts playing",
-          "fixvol_cd": "CD: keep the player volume at 100 %",
-          "refvol_cd": "CD: relative volume for matching (0 = off)",
-          "keepon_cd": "CD: never auto power off on this input",
-          "name_coax1": "Coax 1: name",
-          "player_coax1": "Coax 1: linked media player",
-          "follow_coax1": "Coax 1: switch to this input when the player starts playing",
-          "fixvol_coax1": "Coax 1: keep the player volume at 100 %",
-          "refvol_coax1": "Coax 1: relative volume for matching (0 = off)",
-          "keepon_coax1": "Coax 1: never auto power off on this input",
-          "name_coax2": "Coax 2: name",
-          "player_coax2": "Coax 2: linked media player",
-          "follow_coax2": "Coax 2: switch to this input when the player starts playing",
-          "fixvol_coax2": "Coax 2: keep the player volume at 100 %",
-          "refvol_coax2": "Coax 2: relative volume for matching (0 = off)",
-          "keepon_coax2": "Coax 2: never auto power off on this input",
-          "name_opt1": "Optical 1: name",
-          "player_opt1": "Optical 1: linked media player",
-          "follow_opt1": "Optical 1: switch to this input when the player starts playing",
-          "fixvol_opt1": "Optical 1: keep the player volume at 100 %",
-          "refvol_opt1": "Optical 1: relative volume for matching (0 = off)",
-          "keepon_opt1": "Optical 1: never auto power off on this input",
-          "name_opt2": "Optical 2: name",
-          "player_opt2": "Optical 2: linked media player",
-          "follow_opt2": "Optical 2: switch to this input when the player starts playing",
-          "fixvol_opt2": "Optical 2: keep the player volume at 100 %",
-          "refvol_opt2": "Optical 2: relative volume for matching (0 = off)",
-          "keepon_opt2": "Optical 2: never auto power off on this input",
-          "name_aux": "Aux: name",
-          "player_aux": "Aux: linked media player",
-          "follow_aux": "Aux: switch to this input when the player starts playing",
-          "fixvol_aux": "Aux: keep the player volume at 100 %",
-          "refvol_aux": "Aux: relative volume for matching (0 = off)",
-          "keepon_aux": "Aux: never auto power off on this input",
-          "name_tuner": "Tuner: name",
-          "player_tuner": "Tuner: linked media player",
-          "follow_tuner": "Tuner: switch to this input when the player starts playing",
-          "fixvol_tuner": "Tuner: keep the player volume at 100 %",
-          "refvol_tuner": "Tuner: relative volume for matching (0 = off)",
-          "keepon_tuner": "Tuner: never auto power off on this input",
-          "name_phono": "Phono: name",
-          "player_phono": "Phono: linked media player",
-          "follow_phono": "Phono: switch to this input when the player starts playing",
-          "fixvol_phono": "Phono: keep the player volume at 100 %",
-          "refvol_phono": "Phono: relative volume for matching (0 = off)",
-          "keepon_phono": "Phono: never auto power off on this input",
-          "name_usb": "USB: name",
-          "player_usb": "USB: linked media player",
-          "follow_usb": "USB: switch to this input when the player starts playing",
-          "fixvol_usb": "USB: keep the player volume at 100 %",
-          "refvol_usb": "USB: relative volume for matching (0 = off)",
-          "keepon_usb": "USB: never auto power off on this input",
-          "name_bluetooth": "Bluetooth: name",
-          "player_bluetooth": "Bluetooth: linked media player",
-          "follow_bluetooth": "Bluetooth: switch to this input when the player starts playing",
-          "fixvol_bluetooth": "Bluetooth: keep the player volume at 100 %",
-          "refvol_bluetooth": "Bluetooth: relative volume for matching (0 = off)",
-          "keepon_bluetooth": "Bluetooth: never auto power off on this input",
-          "name_bal_xlr": "XLR: name",
-          "player_bal_xlr": "XLR: linked media player",
-          "follow_bal_xlr": "XLR: switch to this input when the player starts playing",
-          "fixvol_bal_xlr": "XLR: keep the player volume at 100 %",
-          "refvol_bal_xlr": "XLR: relative volume for matching (0 = off)",
-          "keepon_bal_xlr": "XLR: never auto power off on this input",
-          "name_pc_usb": "PC USB: name",
-          "player_pc_usb": "PC USB: linked media player",
-          "follow_pc_usb": "PC USB: switch to this input when the player starts playing",
-          "fixvol_pc_usb": "PC USB: keep the player volume at 100 %",
-          "refvol_pc_usb": "PC USB: relative volume for matching (0 = off)",
-          "keepon_pc_usb": "PC USB: never auto power off on this input",
-          "announce_source": "Input for announcements (TTS)",
-          "announce_volume": "Announcement volume, % of the scale (0 = keep current)"
+          "sources": "Inputs in use"
+        },
+        "data_description": {
+          "sources": "Only these inputs appear in the source list. Unused inputs are hidden; if one is selected on the front panel it is shown with its default name."
+        },
+        "sections": {
+          "volume": {
+            "name": "Volume",
+            "data": {
+              "max_volume": "Maximum volume"
+            },
+            "data_description": {
+              "max_volume": "Amplifier level (1–96) that equals 100 % in Home Assistant. The slider covers 0…this value, and anything set above it on the remote or front panel is pulled back to it."
+            }
+          },
+          "power_volume": {
+            "name": "Auto power off",
+            "data": {
+              "auto_off": "Auto power off after, min"
+            },
+            "data_description": {
+              "auto_off": "Turn the amplifier off after it has been on with nothing playing for this many minutes. 0 = never. Playing means: the linked player of the current input is playing, or a digital input carries a signal. Analog inputs without a player never count as playing, so mark them \"Never auto power off\"."
+            }
+          },
+          "advanced": {
+            "name": "Advanced",
+            "data": {
+              "poll_interval": "Status poll interval, s"
+            },
+            "data_description": {
+              "poll_interval": "The amplifier reports changes by itself; polling only catches missed updates and the signal on digital inputs. Default 30 s. 0 = off."
+            }
+          }
+        }
+      },
+      "inputs": {
+        "title": "Configure an input",
+        "description": "auto = switch on playback · 100 % = fixed player volume · ≈N = relative volume · ⏻ = never auto power off",
+        "data": {
+          "sources": "Input"
+        }
+      },
+      "input": {
+        "title": "Input {label}",
+        "description": "Settings of the **{input}** input. Pick a linked media player and press Submit to see its options.",
+        "data": {
+          "name": "Name",
+          "player": "Linked media player"
+        },
+        "data_description": {
+          "name": "Shown in the source list instead of \"{input}\", e.g. Streamer, TV.",
+          "player": "The media player connected to this input (streamer, smart speaker, Chromecast…). While this input is selected the amplifier entity shows its track, artwork and state, and play / pause / next / seek / browse go to it. Power, volume and input stay on the amplifier. Leave empty if nothing controllable is connected."
+        },
+        "sections": {
+          "player_options": {
+            "name": "Linked player",
+            "data": {
+              "follow": "Switch to this input when the player starts playing",
+              "fixed_volume": "Keep the player volume at 100 %"
+            },
+            "data_description": {
+              "follow": "When the player starts playing, the amplifier turns on if needed, selects this input and pauses the other linked players. With this option on any input, only the current input's player may play. A second player starting within 5 s of an automatic switch is paused instead (no ping-pong).",
+              "fixed_volume": "Volume is controlled on the amplifier, so the player should always output full level. Its volume is set to 100 % and unmuted at start-up and whenever someone changes it."
+            }
+          },
+          "power_volume": {
+            "name": "Volume matching and power",
+            "data": {
+              "ref_volume": "Relative volume",
+              "keep_on": "Never auto power off on this input"
+            },
+            "data_description": {
+              "ref_volume": "Amplifier level at which this input sounds as loud as your other inputs, e.g. Streamer 40, Yandex station 20. When switching between two inputs that both have a value, the volume is scaled by their ratio (Streamer at 30 → station at 15). 0 = don't adjust.",
+              "keep_on": "Auto power off never triggers while this input is selected. Use it for turntables, CD players and other analog sources the integration cannot see playing."
+            }
+          }
+        }
+      },
+      "announce": {
+        "title": "Announcements (TTS)",
+        "description": "Text-to-speech and Assist can speak through the amplifier. It switches to the chosen input, the linked player speaks, then the previous input, volume and power state are restored.",
+        "data": {
+          "announce_source": "Input for announcements",
+          "announce_volume": "Announcement volume"
+        },
+        "data_description": {
+          "announce_source": "Only inputs with a linked player can be chosen. — = announcements are not supported.",
+          "announce_volume": "In % of the volume scale (100 % = maximum volume). 0 = keep the current volume."
         }
       }
     },
     "error": {
+      "cannot_connect": "Failed to connect to the amplifier. Check the address and that POWER OPTION is set to Quick.",
+      "no_response": "The device is reachable but does not answer Rotel commands.",
+      "unknown": "Unexpected error",
       "no_sources": "Select at least one input",
-      "duplicate_name": "Names must be unique",
-      "self_player": "Cannot link the amplifier to itself",
-      "announce_needs_player": "The announcement input needs a linked media player"
+      "duplicate_name": "Another input already has this name",
+      "self_player": "Cannot link the amplifier to itself"
     }
   },
   "entity": {
@@ -303,7 +328,7 @@
   "issues": {
     "missing_player": {
       "title": "Linked media player not found",
-      "description": "{title}: these linked media players no longer exist: {players}. Open the integration → Configure and pick other players or clear the fields."
+      "description": "{title}: these linked media players no longer exist: {players}. Open the integration → Configure → Configure an input and pick another player or clear the field."
     }
   }
 }

@@ -21,6 +21,32 @@ async def wait_for(cond, timeout: float = 10.0) -> None:
     raise AssertionError("condition not met")
 
 
+def general(sources: list[str], max_volume: int = 60, auto_off: int = 0,
+            poll_interval: int = 0) -> dict:
+    """User input of the 'sources' / 'general' step (with sections)."""
+    return {
+        "sources": sources,
+        "volume": {"max_volume": max_volume},
+        "power_volume": {"auto_off": auto_off},
+        "advanced": {"poll_interval": poll_interval},
+    }
+
+
+def one_input(name: str, player: str | None = None, *, follow: bool = False,
+              fixed_volume: bool = False, ref_volume: int = 0,
+              keep_on: bool = False, with_player_section: bool = True) -> dict:
+    """User input of the per-input step."""
+    data: dict = {
+        "name": name,
+        "power_volume": {"ref_volume": ref_volume, "keep_on": keep_on},
+    }
+    if player:
+        data["player"] = player
+        if with_player_section:
+            data["player_options"] = {"follow": follow, "fixed_volume": fixed_volume}
+    return data
+
+
 def make_entry(port: int, poll_interval: int = 0) -> MockConfigEntry:
     """Config entry pointing at the fake amp."""
     return MockConfigEntry(

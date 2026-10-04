@@ -22,22 +22,11 @@ CONF_POLL_INTERVAL: Final = "poll_interval"
 DEFAULT_POLL_INTERVAL: Final = 30  # seconds, 0 = disabled
 FULL_REFRESH_EVERY: Final = 10  # every Nth poll re-queries everything
 
-# Prefix of dynamic per-source name fields in the flows ("name_coax2" ...)
-SOURCE_NAME_PREFIX: Final = "name_"
-# Prefix of dynamic per-source linked media player fields ("player_coax2" ...)
-SOURCE_PLAYER_PREFIX: Final = "player_"
-# Prefix of per-source "follow playback" switches ("follow_coax2" ...)
-SOURCE_FOLLOW_PREFIX: Final = "follow_"
-
-# Prefix of per-source "keep linked player at 100 % volume" switches
-SOURCE_FIXVOL_PREFIX: Final = "fixvol_"
+# inputs whose linked player is kept at 100 % volume
 CONF_SOURCE_FIXED_VOLUME: Final = "source_fixed_volume"
-
-# Per-input "relative volume" for automatic volume matching on input change
-SOURCE_REFVOL_PREFIX: Final = "refvol_"
+# per-input relative volume for volume matching on input change
 CONF_SOURCE_REF_VOLUME: Final = "source_ref_volume"
-# Per-input "never auto power off on this input"
-SOURCE_KEEPON_PREFIX: Final = "keepon_"
+# inputs where auto power off never triggers
 CONF_SOURCE_KEEP_ON: Final = "source_keep_on"
 
 # Announcements (TTS) sent to the amplifier entity

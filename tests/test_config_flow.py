@@ -1,4 +1,4 @@
-"""Config / options flow tests."""
+"""Config flow tests."""
 from __future__ import annotations
 
 from homeassistant import config_entries
@@ -7,52 +7,75 @@ from homeassistant.data_entry_flow import FlowResultType
 
 from custom_components.rotel_amp.const import DOMAIN
 
-from .helpers import ENTITY, make_entry, wait_for
+from .helpers import ENTITY, general, one_input, wait_for
+
+STREAMER = "media_player.streamer"
 
 
-async def test_config_flow(hass: HomeAssistant, fake_rotel) -> None:
+def field_names(result) -> list[str]:
+    return [str(k) for k in result["data_schema"].schema]
+
+
+async def _start(hass: HomeAssistant, port: int):
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
-    result = await hass.config_entries.flow.async_configure(
-        result["flow_id"],
-        {"host": "127.0.0.1", "port": fake_rotel.port, "name": "Rotel"},
+    return await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"host": "127.0.0.1", "port": port, "name": "Rotel"}
     )
+
+
+async def test_config_flow(hass: HomeAssistant, fake_rotel) -> None:
+    result = await _start(hass, fake_rotel.port)
     assert result["step_id"] == "sources"
-    result = await hass.config_entries.flow.async_configure(
-        result["flow_id"],
-        {"sources": [], "max_volume": 60, "poll_interval": 20, "auto_off": 0},
-    )
+    assert field_names(result) == ["sources", "volume", "power_volume", "advanced"]
+    flow = result["flow_id"]
+    result = await hass.config_entries.flow.async_configure(flow, general([]))
     assert result["errors"] == {"sources": "no_sources"}
+
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"],
-        {
-            "sources": ["opt1", "coax2"],
-            "max_volume": 60,
-            "poll_interval": 20,
-            "auto_off": 15,
-        },
+        flow, general(["opt1", "coax2"], max_volume=60, auto_off=15, poll_interval=20)
     )
-    assert result["step_id"] == "names"
+    # inputs are configured one by one, in canonical order
+    assert result["step_id"] == "input"
+    assert result["description_placeholders"]["input"] == "Coax 2"
+    # no player yet -> no player options
+    assert field_names(result) == ["name", "player", "power_volume"]
+
+    # picking a player shows the same input again, now with its options
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], {"name_coax2": "Стример", "name_opt1": "Стример"}
+        flow, one_input("Стример", STREAMER, with_player_section=False)
     )
-    assert result["errors"] == {"name_opt1": "duplicate_name"}
+    assert result["description_placeholders"]["input"] == "Coax 2"
+    assert field_names(result) == ["name", "player", "player_options", "power_volume"]
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], {"name_coax2": "Стример", "name_opt1": "ТВ"}
+        flow,
+        one_input("Стример", STREAMER, follow=True, fixed_volume=True, ref_volume=40),
+    )
+    assert result["description_placeholders"]["input"] == "Optical 1"
+
+    result = await hass.config_entries.flow.async_configure(flow, one_input("Стример"))
+    assert result["errors"] == {"name": "duplicate_name"}
+    result = await hass.config_entries.flow.async_configure(
+        flow, one_input("ТВ", keep_on=True)
+    )
+    # a player exists -> announcement step
+    assert result["step_id"] == "announce"
+    result = await hass.config_entries.flow.async_configure(
+        flow, {"announce_source": "coax2", "announce_volume": 30}
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["options"] == {
         "sources": ["coax2", "opt1"],
         "source_names": {"coax2": "Стример", "opt1": "ТВ"},
-        "source_players": {},
-        "source_follow": [],
-        "source_fixed_volume": [],
-        "source_ref_volume": {},
-        "source_keep_on": [],
-        "announce_source": None,
-        "announce_volume": 0,
+        "source_players": {"coax2": STREAMER},
+        "source_follow": ["coax2"],
+        "source_fixed_volume": ["coax2"],
+        "source_ref_volume": {"coax2": 40},
+        "source_keep_on": ["opt1"],
+        "announce_source": "coax2",
+        "announce_volume": 30,
         "max_volume": 60,
         "poll_interval": 20,
         "auto_off": 15,
@@ -63,48 +86,22 @@ async def test_config_flow(hass: HomeAssistant, fake_rotel) -> None:
     await hass.config_entries.async_unload(entry.entry_id)
 
 
-async def test_config_flow_cannot_connect(hass: HomeAssistant) -> None:
-    result = await hass.config_entries.flow.async_init(
-        DOMAIN, context={"source": config_entries.SOURCE_USER}
+async def test_config_flow_without_players_skips_announce(
+    hass: HomeAssistant, fake_rotel
+) -> None:
+    result = await _start(hass, fake_rotel.port)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], general(["cd"])
     )
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], {"host": "127.0.0.1", "port": 1, "name": "Rotel"}
-    )
-    assert result["errors"] == {"base": "cannot_connect"}
-
-
-async def test_options_flow(hass: HomeAssistant, fake_rotel) -> None:
-    entry = make_entry(fake_rotel.port)
-    entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(entry.entry_id)
-    await wait_for(lambda: hass.states.get(ENTITY).state == "on")
-
-    result = await hass.config_entries.options.async_init(entry.entry_id)
-    result = await hass.config_entries.options.async_configure(
-        result["flow_id"], {"sources": ["coax2", "cd"], "max_volume": 70, "poll_interval": 0, "auto_off": 0}
-    )
-    assert result["step_id"] == "names"
-    # linking the integration's own entity is rejected
-    result = await hass.config_entries.options.async_configure(
-        result["flow_id"],
-        {"name_cd": "Проигрыватель", "name_coax2": "Streamer", "player_cd": ENTITY},
-    )
-    assert result["errors"] == {"player_cd": "self_player"}
-    result = await hass.config_entries.options.async_configure(
-        result["flow_id"],
-        {
-            "name_cd": "Проигрыватель",
-            "name_coax2": "Streamer",
-            "player_coax2": "media_player.streamer",
-            "follow_coax2": True,
-            "follow_cd": True,  # ignored: no player linked
-        },
+        result["flow_id"], one_input("")  # empty name -> default name
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
-    assert entry.options["source_players"] == {"coax2": "media_player.streamer"}
-    assert entry.options["source_follow"] == ["coax2"]
-    await wait_for(
-        lambda: (s := hass.states.get(ENTITY)) is not None
-        and s.attributes.get("source_list") == ["Проигрыватель", "Streamer"]
-    )
+    assert result["options"]["source_names"] == {"cd": "CD"}
+    entry = hass.config_entries.async_entries(DOMAIN)[0]
     await hass.config_entries.async_unload(entry.entry_id)
+
+
+async def test_config_flow_cannot_connect(hass: HomeAssistant) -> None:
+    result = await _start(hass, 1)
+    assert result["errors"] == {"base": "cannot_connect"}

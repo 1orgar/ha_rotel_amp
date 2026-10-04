@@ -3,15 +3,11 @@ from __future__ import annotations
 
 import asyncio
 
-from homeassistant import config_entries
 from homeassistant.components.media_player import (
     DATA_COMPONENT,
     MediaPlayerEntityFeature as F,
 )
 from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.data_entry_flow import FlowResultType
-
-from custom_components.rotel_amp.const import DOMAIN
 
 from .helpers import ENTITY, wait_for
 from .test_reconfigure_repairs import ALICE, FEATS, linked_entry
@@ -88,40 +84,4 @@ async def test_announce_does_not_trigger_follow(hass: HomeAssistant, fake_rotel)
     await wait_for(lambda: hass.states.get(ENTITY).attributes["source"] == "ТВ")
     await asyncio.sleep(0.5)
     assert hass.states.get(ENTITY).attributes["source"] == "ТВ"
-    await hass.config_entries.async_unload(entry.entry_id)
-
-
-async def test_config_flow_new_options(hass: HomeAssistant, fake_rotel) -> None:
-    result = await hass.config_entries.flow.async_init(
-        DOMAIN, context={"source": config_entries.SOURCE_USER}
-    )
-    result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], {"host": "127.0.0.1", "port": fake_rotel.port, "name": "R"}
-    )
-    result = await hass.config_entries.flow.async_configure(
-        result["flow_id"],
-        {"sources": ["coax1"], "max_volume": 60, "poll_interval": 0, "auto_off": 0},
-    )
-    result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], {"name_coax1": "Алиса", "announce_source": "coax1"}
-    )
-    assert result["errors"] == {"announce_source": "announce_needs_player"}
-    result = await hass.config_entries.flow.async_configure(
-        result["flow_id"],
-        {
-            "name_coax1": "Алиса",
-            "player_coax1": ALICE,
-            "refvol_coax1": 20,
-            "keepon_coax1": True,
-            "announce_source": "coax1",
-            "announce_volume": 40,
-        },
-    )
-    assert result["type"] is FlowResultType.CREATE_ENTRY
-    opts = result["options"]
-    assert opts["source_ref_volume"] == {"coax1": 20}
-    assert opts["source_keep_on"] == ["coax1"]
-    assert opts["announce_source"] == "coax1"
-    assert opts["announce_volume"] == 40
-    entry = hass.config_entries.async_entries(DOMAIN)[0]
     await hass.config_entries.async_unload(entry.entry_id)

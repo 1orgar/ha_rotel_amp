@@ -1,5 +1,13 @@
 # Changelog
 
+## 4.1.0
+- Fixed: input options were shown with raw names (`fixvol_coax2`, `refvol_coax2`…). The form was one long page with dynamic field names; translations could not match all of them reliably.
+- Config flow reorganised: one page per input with fixed field names, grouped into sections (*Linked player*, *Volume matching and power*), and a separate announcements page. General settings are split into *Volume*, *Auto power off* and *Advanced* sections.
+- "Switch to this input" and "Keep volume at 100 %" are shown only when a linked player is chosen.
+- Options flow is a menu: general settings, configure one input (with a summary of each input), announcements, save.
+- Every field has a detailed description (English and Russian).
+- Tests check that every form field, section and menu item is translated.
+
 ## 4.0.0
 **Breaking:** the volume scale changed. 0…100 % in Home Assistant now maps to 0…`max_volume` on the amplifier (it used to be 0…100). Automations that set `volume_level` give a louder result when the maximum is below 100. The raw amplifier value is in the new `amp_volume` attribute.
 
