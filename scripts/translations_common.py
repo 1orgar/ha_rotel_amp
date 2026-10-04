@@ -30,6 +30,12 @@ def build(t: dict[str, Any]) -> dict[str, Any]:
                 },
                 "input": t["INPUT"],
                 "announce": t["ANNOUNCE"],
+                "overview": t["OVERVIEW"],
+                "edit_input": {
+                    "title": text["inputs_title"],
+                    "description": text["inputs_desc"],
+                    "data": {"sources": text["inputs_field"]},
+                },
                 "reconfigure": {
                     "title": text["reconfigure_title"],
                     "description": text["reconfigure_desc"],

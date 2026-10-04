@@ -1,5 +1,8 @@
 # Changelog
 
+## 4.2.0
+- Setup wizard ends with an overview page that lists all inputs, with navigation: *Finish setup*, *Change an input*, *Announcements*, *Back to inputs and general settings*. Home Assistant has no built-in back button in config flows, so this replaces it. Going back keeps what was already entered and does not ask again for inputs that are already configured.
+
 ## 4.1.0
 - Fixed: input options were shown with raw names (`fixvol_coax2`, `refvol_coax2`…). The form was one long page with dynamic field names; translations could not match all of them reliably.
 - Config flow reorganised: one page per input with fixed field names, grouped into sections (*Linked player*, *Volume matching and power*), and a separate announcements page. General settings are split into *Volume*, *Auto power off* and *Advanced* sections.

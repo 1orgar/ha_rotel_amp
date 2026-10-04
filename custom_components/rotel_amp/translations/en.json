@@ -17,7 +17,7 @@
       },
       "sources": {
         "title": "Inputs and general settings",
-        "description": "Next you will set up each selected input.",
+        "description": "Next you will set up each selected input, then see an overview where you can go back to any step.",
         "data": {
           "sources": "Inputs in use"
         },
@@ -100,6 +100,29 @@
         "data_description": {
           "announce_source": "Only inputs with a linked player can be chosen. — = announcements are not supported.",
           "announce_volume": "In % of the volume scale (100 % = maximum volume). 0 = keep the current volume."
+        }
+      },
+      "overview": {
+        "title": "Check and finish",
+        "description": "{summary}\n\nEverything can also be changed later via **Configure**.",
+        "menu_options": {
+          "finish": "Finish setup",
+          "edit_input": "Change an input",
+          "announce": "Announcements (TTS)",
+          "sources": "Back to inputs and general settings"
+        },
+        "menu_option_descriptions": {
+          "finish": "Create the integration with these settings",
+          "edit_input": "Name, linked player, auto switching, fixed and relative volume",
+          "announce": "Input and volume for text-to-speech",
+          "sources": "Add or remove inputs, maximum volume, auto power off"
+        }
+      },
+      "edit_input": {
+        "title": "Configure an input",
+        "description": "auto = switch on playback · 100 % = fixed player volume · ≈N = relative volume · ⏻ = never auto power off",
+        "data": {
+          "sources": "Input"
         }
       },
       "reconfigure": {

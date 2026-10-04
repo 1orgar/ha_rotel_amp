@@ -410,6 +410,25 @@ def _input_menu_label(key: str, opts: dict[str, Any]) -> str:
     return f"{label} — {' · '.join(extras)}" if extras else label
 
 
+def _pick_input_schema(opts: dict[str, Any]) -> vol.Schema:
+    sources = opts.get(CONF_SOURCES, [])
+    return vol.Schema(
+        {
+            vol.Required(CONF_SOURCES, default=sources[0]): selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=[
+                        selector.SelectOptionDict(
+                            value=k, label=_input_menu_label(k, opts)
+                        )
+                        for k in sources
+                    ],
+                    mode=selector.SelectSelectorMode.LIST,
+                )
+            )
+        }
+    )
+
+
 def _summary(opts: dict[str, Any]) -> str:
     """Markdown list of the configured inputs for the menu description."""
     return "\n".join(f"- {_input_menu_label(k, opts)}" for k in opts.get(CONF_SOURCES, []))
@@ -425,6 +444,7 @@ class RotelConfigFlow(_InputStepMixin, ConfigFlow, domain=DOMAIN):
         self._data: dict[str, Any] = {}
         self._opts = _defaults()
         self._queue: list[str] = []
+        self._done: set[str] = set()
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -462,25 +482,60 @@ class RotelConfigFlow(_InputStepMixin, ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             errors = _apply_general(self._opts, user_input)
             if not errors:
-                self._queue = list(self._opts[CONF_SOURCES])
-                return self._start_input(self._queue.pop(0))
+                self._done &= set(self._opts[CONF_SOURCES])
+                # first time: walk through the inputs one by one; later the
+                # overview menu lets the user jump to any of them
+                self._queue = [
+                    k for k in self._opts[CONF_SOURCES] if k not in self._done
+                ]
+                if self._queue:
+                    return self._start_input(self._queue.pop(0))
+                return await self.async_step_overview()
         return self.async_show_form(
-            step_id="sources", data_schema=_general_schema(self._opts), errors=errors
+            step_id="sources",
+            data_schema=_general_schema(self._opts),
+            errors=errors,
+            last_step=False,
         )
 
     async def async_step_input(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """One input (repeated for every selected input)."""
+        """One input; then the next unconfigured one, then the overview."""
         if user_input is None:
             return self._show_input()
         if (form := self._handle_input(user_input)) is not None:
             return form
+        self._done.add(self._key)
         if self._queue:
             return self._start_input(self._queue.pop(0))
+        return await self.async_step_overview()
+
+    async def async_step_overview(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Summary + navigation (this is the "back" of the setup wizard)."""
+        menu = ["finish", "edit_input", "sources"]
         if self._opts.get(CONF_SOURCE_PLAYERS):
-            return await self.async_step_announce()
-        return self._finish()
+            menu.insert(2, "announce")
+        return self.async_show_menu(
+            step_id="overview",
+            menu_options=menu,
+            description_placeholders={"summary": _summary(self._opts)},
+        )
+
+    async def async_step_edit_input(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Pick an input to (re)configure."""
+        if user_input is not None:
+            self._queue = []
+            return self._start_input(user_input[CONF_SOURCES])
+        return self.async_show_form(
+            step_id="edit_input",
+            data_schema=_pick_input_schema(self._opts),
+            last_step=False,
+        )
 
     async def async_step_announce(
         self, user_input: dict[str, Any] | None = None
@@ -488,12 +543,17 @@ class RotelConfigFlow(_InputStepMixin, ConfigFlow, domain=DOMAIN):
         """Announcement input and volume."""
         if user_input is not None:
             _apply_announce(self._opts, user_input)
-            return self._finish()
+            return await self.async_step_overview()
         return self.async_show_form(
-            step_id="announce", data_schema=_announce_schema(self._opts)
+            step_id="announce",
+            data_schema=_announce_schema(self._opts),
+            last_step=False,
         )
 
-    def _finish(self) -> ConfigFlowResult:
+    async def async_step_finish(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Create the entry."""
         return self.async_create_entry(
             title=self._data[CONF_NAME], data=self._data, options=self._opts
         )
@@ -584,28 +644,11 @@ class RotelOptionsFlow(_InputStepMixin, OptionsFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Pick an input to edit."""
-        sources = self._opts.get(CONF_SOURCES, [])
         if user_input is not None:
             return self._start_input(user_input[CONF_SOURCES])
         return self.async_show_form(
             step_id="inputs",
-            data_schema=vol.Schema(
-                {
-                    vol.Required(CONF_SOURCES, default=sources[0]): (
-                        selector.SelectSelector(
-                            selector.SelectSelectorConfig(
-                                options=[
-                                    selector.SelectOptionDict(
-                                        value=k, label=_input_menu_label(k, self._opts)
-                                    )
-                                    for k in sources
-                                ],
-                                mode=selector.SelectSelectorMode.LIST,
-                            )
-                        )
-                    )
-                }
-            ),
+            data_schema=_pick_input_schema(self._opts),
             last_step=False,
         )
 

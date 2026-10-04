@@ -60,10 +60,43 @@ async def test_config_flow(hass: HomeAssistant, fake_rotel) -> None:
     result = await hass.config_entries.flow.async_configure(
         flow, one_input("ТВ", keep_on=True)
     )
-    # a player exists -> announcement step
-    assert result["step_id"] == "announce"
+    # all inputs done -> overview with navigation ("back")
+    assert result["type"] is FlowResultType.MENU
+    assert result["step_id"] == "overview"
+    assert result["menu_options"] == ["finish", "edit_input", "announce", "sources"]
+    assert "Стример (Coax 2)" in result["description_placeholders"]["summary"]
+
+    # go back to an input and change it
+    result = await hass.config_entries.flow.async_configure(
+        flow, {"next_step_id": "edit_input"}
+    )
+    result = await hass.config_entries.flow.async_configure(flow, {"sources": "opt1"})
+    assert result["step_id"] == "input"
+    assert result["description_placeholders"]["input"] == "Optical 1"
+    result = await hass.config_entries.flow.async_configure(
+        flow, one_input("ТВ", keep_on=True)
+    )
+    assert result["step_id"] == "overview"
+
+    # back to general settings: already configured inputs are not asked again
+    result = await hass.config_entries.flow.async_configure(
+        flow, {"next_step_id": "sources"}
+    )
+    assert result["step_id"] == "sources"
+    result = await hass.config_entries.flow.async_configure(
+        flow, general(["opt1", "coax2"], max_volume=60, auto_off=15, poll_interval=20)
+    )
+    assert result["step_id"] == "overview"
+
+    result = await hass.config_entries.flow.async_configure(
+        flow, {"next_step_id": "announce"}
+    )
     result = await hass.config_entries.flow.async_configure(
         flow, {"announce_source": "coax2", "announce_volume": 30}
+    )
+    assert result["step_id"] == "overview"
+    result = await hass.config_entries.flow.async_configure(
+        flow, {"next_step_id": "finish"}
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["options"] == {
@@ -95,6 +128,10 @@ async def test_config_flow_without_players_skips_announce(
     )
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], one_input("")  # empty name -> default name
+    )
+    assert result["menu_options"] == ["finish", "edit_input", "sources"]
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"next_step_id": "finish"}
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["options"]["source_names"] == {"cd": "CD"}

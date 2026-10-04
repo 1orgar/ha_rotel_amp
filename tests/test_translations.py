@@ -27,6 +27,7 @@ STEPS = {
         "sources": cf._general_schema(OPTS),
         "input": cf._input_schema("coax2", OPTS, "media_player.x"),
         "announce": cf._announce_schema(OPTS),
+        "edit_input": vol.Schema({vol.Required("sources"): str}),
         "reconfigure": cf._address_schema("h", 9590, None),
     },
     "options": {
@@ -74,12 +75,26 @@ def test_every_flow_field_is_translated(lang: str) -> None:
                         missing.append(
                             f"{flow}.{step_id}.sections.{name}.data_description.{field}"
                         )
-    menu = data["options"]["step"]["init"]
-    for option in ("general", "inputs", "announce", "save"):
-        if option not in menu.get("menu_options", {}):
-            missing.append(f"options.init.menu_options.{option}")
-    # "inputs" has no description per field on purpose
-    missing = [m for m in missing if m != "options.inputs.data_description.sources"]
+    menus = {
+        ("options", "init"): ("general", "inputs", "announce", "save"),
+        ("config", "overview"): ("finish", "edit_input", "announce", "sources"),
+    }
+    for (flow, step_id), options in menus.items():
+        menu = data[flow]["step"].get(step_id, {})
+        for option in options:
+            for key in ("menu_options", "menu_option_descriptions"):
+                if option not in menu.get(key, {}):
+                    missing.append(f"{flow}.{step_id}.{key}.{option}")
+    # the input pickers have no per-field description on purpose
+    missing = [
+        m
+        for m in missing
+        if m
+        not in (
+            "options.inputs.data_description.sources",
+            "config.edit_input.data_description.sources",
+        )
+    ]
     assert not missing, missing
 
 

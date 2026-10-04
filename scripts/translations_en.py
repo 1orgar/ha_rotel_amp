@@ -143,12 +143,32 @@ MENU = {
     },
 }
 
+OVERVIEW = {
+    "title": "Check and finish",
+    "description": "{summary}\n\nEverything can also be changed later via "
+    "**Configure**.",
+    "menu_options": {
+        "finish": "Finish setup",
+        "edit_input": "Change an input",
+        "announce": "Announcements (TTS)",
+        "sources": "Back to inputs and general settings",
+    },
+    "menu_option_descriptions": {
+        "finish": "Create the integration with these settings",
+        "edit_input": "Name, linked player, auto switching, fixed and relative "
+        "volume",
+        "announce": "Input and volume for text-to-speech",
+        "sources": "Add or remove inputs, maximum volume, auto power off",
+    },
+}
+
 TEXT = {
     "user_title": "Rotel amplifier",
     "user_desc": "Set **POWER OPTION = Quick** on the amplifier so it stays "
     "reachable over the network in standby.",
     "sources_title": "Inputs and general settings",
-    "sources_desc": "Next you will set up each selected input.",
+    "sources_desc": "Next you will set up each selected input, then see an "
+    "overview where you can go back to any step.",
     "reconfigure_title": "Change amplifier address",
     "reconfigure_desc": "New IP address or port. Inputs, links and entity IDs "
     "are kept.",

@@ -58,7 +58,7 @@ Set **POWER OPTION = Quick** on the amplifier, otherwise it is not reachable ove
    - name and linked media player;
    - *Linked player* — "switch to this input" and "keep volume at 100 %". This section appears only after you choose a player and press **Submit**, so the page shows a second time;
    - *Volume matching and power* (collapsed) — relative volume and "never auto power off".
-4. **Announcements** — input and volume for TTS. Shown only if at least one input has a linked player.
+4. **Overview** — all inputs with their settings, and buttons: *Finish setup*, *Change an input*, *Announcements* (input and volume for TTS; only if an input has a linked player), *Back to inputs and general settings*. Home Assistant forms have no "Back" button, so this page is how you go back.
 
 Every field has an explanation underneath it.
 
