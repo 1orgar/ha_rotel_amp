@@ -44,6 +44,9 @@ NO_SIGNAL_VALUES: Final = frozenset({"", "off", "0", "none", "no_signal", "---"}
 
 # Ignore follow triggers this soon after the previous automatic switch
 FOLLOW_COOLDOWN: Final = 5.0
+# A linked player that was playing and became unavailable is still treated as
+# playing for this long (network blip); after that it counts as not playing.
+PLAYER_UNAVAILABLE_GRACE: Final = 60.0
 EVENT_SOURCE_SWITCHED: Final = "rotel_amp_source_switched"
 
 # Follow playback timings

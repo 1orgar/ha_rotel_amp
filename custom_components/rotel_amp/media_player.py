@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
 import time
 from typing import Any
@@ -81,6 +81,7 @@ from homeassistant.helpers.event import (
     async_call_later,
     async_track_state_change_event,
 )
+from homeassistant.util import dt as dt_util
 import voluptuous as vol
 
 from . import RotelConfigEntry
@@ -106,6 +107,7 @@ from .const import (
     EVENT_SOURCE_SWITCHED,
     FOLLOW_COOLDOWN,
     NO_SIGNAL_VALUES,
+    PLAYER_UNAVAILABLE_GRACE,
     POWER_ON_SETTLE,
     POWER_ON_TIMEOUT,
     REPORTED_TO_SOURCE,
@@ -273,6 +275,15 @@ class RotelMediaPlayer(MediaPlayerEntity):
         }
         self._auto_off = float(options.get(CONF_AUTO_OFF, DEFAULT_AUTO_OFF)) * 60
         self._auto_off_unsub: CALLBACK_TYPE | None = None
+        # monotonic time since which nothing has been playing (None = playing,
+        # amp off or timer not applicable). Survives state flapping and amp
+        # reconnects, so short glitches do not restart the countdown.
+        self._idle_since: float | None = None
+        self._auto_off_deadline: float | None = None
+        self._grace_unsub: CALLBACK_TYPE | None = None
+        # per linked player: last time it was seen playing / last real state
+        self._last_playing_at: dict[str, float] = {}
+        self._last_real_state: dict[str, str] = {}
         self._power_on_event = asyncio.Event()
         self._source_event = asyncio.Event()
         self._follow_task: asyncio.Task | None = None
@@ -339,7 +350,11 @@ class RotelMediaPlayer(MediaPlayerEntity):
                 )
             )
 
+        for entity_id in set(self._players.values()):
+            if (state := self.hass.states.get(entity_id)) is not None:
+                self._remember_player_state(entity_id, state)
         self.async_on_remove(self._cancel_auto_off)
+        self.async_on_remove(self._cancel_grace)
         self.async_on_remove(self._cancel_follow)
         self.async_on_remove(self._cancel_signal_check)
         if self._fixvol_players:
@@ -349,7 +364,12 @@ class RotelMediaPlayer(MediaPlayerEntity):
     def _handle_linked(self, event: Event[EventStateChangedData]) -> None:
         """React to linked player changes."""
         entity_id = event.data["entity_id"]
-        new, old = event.data["new_state"], event.data["old_state"]
+        new = event.data["new_state"]
+        # Compare with the last *available* state: playing -> unavailable ->
+        # playing is a network blip, not a new start of playback.
+        previous = self._last_real_state.get(entity_id)
+        if new is not None:
+            self._remember_player_state(entity_id, new)
         if entity_id in self._fixvol_players:
             self._enforce_fixed_volume(new)
         if self._announcing:
@@ -360,7 +380,7 @@ class RotelMediaPlayer(MediaPlayerEntity):
         if (
             new is not None
             and new.state == MediaPlayerState.PLAYING
-            and (old is None or old.state != MediaPlayerState.PLAYING)
+            and previous != MediaPlayerState.PLAYING
         ):
             key = next(
                 (k for k in self._follow if self._players[k] == entity_id), None
@@ -420,6 +440,9 @@ class RotelMediaPlayer(MediaPlayerEntity):
     @callback
     def _handle_connection(self, connected: bool) -> None:
         self._attr_available = connected
+        if connected and self._auto_off_deadline is not None:
+            # a countdown that expired while disconnected: re-arm (fires now)
+            self._cancel_auto_off()
         self._write_state()
 
     @callback
@@ -666,32 +689,100 @@ class RotelMediaPlayer(MediaPlayerEntity):
         with contextlib.suppress(ConnectionError):
             await self._client.send(command)
 
+    @callback
+    def _remember_player_state(self, entity_id: str, state: State) -> None:
+        if state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
+            return
+        self._last_real_state[entity_id] = state.state
+        if state.state in (MediaPlayerState.PLAYING, MediaPlayerState.BUFFERING):
+            self._last_playing_at[entity_id] = time.monotonic()
+
+    def _player_playing(self, entity_id: str) -> tuple[bool, float | None]:
+        """Is the linked player playing? Also returns when the grace ends.
+
+        playing / buffering            -> playing
+        paused / idle / off / standby  -> not playing
+        unavailable / unknown / gone   -> playing only within the grace period
+                                          after it was last seen playing
+        """
+        state = self.hass.states.get(entity_id) if self.hass else None
+        if state is not None and state.state in (
+            MediaPlayerState.PLAYING,
+            MediaPlayerState.BUFFERING,
+        ):
+            self._last_playing_at[entity_id] = time.monotonic()
+            return True, None
+        if state is None or state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
+            seen = self._last_playing_at.get(entity_id)
+            if (
+                seen is not None
+                and self._last_real_state.get(entity_id) == MediaPlayerState.PLAYING
+            ):
+                grace_end = seen + PLAYER_UNAVAILABLE_GRACE
+                if time.monotonic() < grace_end:
+                    return True, grace_end
+        return False, None
+
     @property
     def _is_playing(self) -> bool:
         """Something is audibly playing on the current input."""
-        if self.state == MediaPlayerState.PLAYING:
-            return True
-        # no linked player (or it is unavailable): use the digital signal
-        return self._linked is None and self._has_signal is True
+        return self._playback()[0]
+
+    def _playback(self) -> tuple[bool, float | None]:
+        """(playing, recheck_at) for the current input."""
+        if self._attr_state != MediaPlayerState.ON:
+            return False, None
+        entity_id = self._linked_entity_id
+        if entity_id is not None:
+            # A linked player decides alone: many streamers keep sending a
+            # digital clock while paused, so the signal would lie here.
+            return self._player_playing(entity_id)
+        # no linked player: use the incoming signal on digital inputs
+        return self._has_signal is True, None
 
     # ---- auto power off --------------------------------------------------
     @callback
     def _update_auto_off(self) -> None:
-        """Run the idle timer while the amp is on and nothing is playing."""
-        if not self._auto_off:
+        """Keep a countdown that starts when playback stops.
+
+        The countdown is based on the moment playback stopped, not on the
+        last state change, so flapping between paused / unavailable and amp
+        reconnects do not restart it. Only real playback, turning the amp
+        off, an announcement or a "never auto off" input reset it.
+        """
+        if not self._auto_off or self.hass is None:
             return
-        idle = (
-            self.available
-            and self._attr_state == MediaPlayerState.ON
-            and not self._is_playing
+        self._cancel_grace()
+        applicable = (
+            self._attr_state == MediaPlayerState.ON
             and self._current_key not in self._keep_on
             and not self._announcing
         )
-        if not idle:
+        playing, recheck_at = self._playback() if applicable else (False, None)
+        if not applicable or playing:
+            if self._idle_since is not None:
+                _LOGGER.debug("Auto power off countdown stopped")
+            self._idle_since = None
+            self._auto_off_deadline = None
             self._cancel_auto_off()
-        elif self._auto_off_unsub is None:
+            if recheck_at is not None:
+                # player unavailable within the grace period: look again later
+                self._grace_unsub = async_call_later(
+                    self.hass,
+                    max(0.0, recheck_at - time.monotonic()) + 0.05,
+                    self._async_grace_over,
+                )
+            return
+        now = time.monotonic()
+        if self._idle_since is None:
+            self._idle_since = now
+            _LOGGER.debug("Nothing playing, auto power off in %s s", self._auto_off)
+        deadline = self._idle_since + self._auto_off
+        if self._auto_off_unsub is None or self._auto_off_deadline != deadline:
+            self._cancel_auto_off()
+            self._auto_off_deadline = deadline
             self._auto_off_unsub = async_call_later(
-                self.hass, self._auto_off, self._async_auto_off
+                self.hass, max(0.0, deadline - now), self._async_auto_off
             )
 
     @callback
@@ -700,12 +791,29 @@ class RotelMediaPlayer(MediaPlayerEntity):
             self._auto_off_unsub()
             self._auto_off_unsub = None
 
+    @callback
+    def _cancel_grace(self) -> None:
+        if self._grace_unsub is not None:
+            self._grace_unsub()
+            self._grace_unsub = None
+
+    @callback
+    def _async_grace_over(self, _now: datetime) -> None:
+        self._grace_unsub = None
+        self._write_state()
+
     async def _async_auto_off(self, _now: datetime) -> None:
         self._auto_off_unsub = None
+        if self._idle_since is None or self._is_playing:
+            return
+        if not self._client.connected:
+            # retried as soon as the connection is back (deadline is kept)
+            _LOGGER.debug("Auto power off due, waiting for the connection")
+            return
         if (
             self._attr_state == MediaPlayerState.ON
-            and not self._is_playing
             and self._current_key not in self._keep_on
+            and not self._announcing
         ):
             _LOGGER.info(
                 "Nothing played for %s min, turning Rotel off", self._auto_off / 60
@@ -714,6 +822,14 @@ class RotelMediaPlayer(MediaPlayerEntity):
                 await self._client.send("power_off!")
             except ConnectionError as err:
                 _LOGGER.warning("Auto power off failed: %s", err)
+
+    @property
+    def _auto_off_at(self) -> datetime | None:
+        if self._auto_off_deadline is None:
+            return None
+        return dt_util.utcnow() + timedelta(
+            seconds=max(0.0, self._auto_off_deadline - time.monotonic())
+        )
 
     def _apply(self, key: str, value: str) -> None:
         if key == "power":
@@ -786,6 +902,7 @@ class RotelMediaPlayer(MediaPlayerEntity):
             **self._extra,
             "address": self._host_info,
             "linked_player": self._linked_entity_id,
+            "auto_off_at": self._auto_off_at.isoformat() if self._auto_off_at else None,
         }
 
     # ---- linked (proxied) media player ------------------------------------

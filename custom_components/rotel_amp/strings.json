@@ -40,7 +40,7 @@
               "auto_off": "Auto power off after, min"
             },
             "data_description": {
-              "auto_off": "Turn the amplifier off after it has been on with nothing playing for this many minutes. 0 = never. Playing means: the linked player of the current input is playing, or a digital input carries a signal. Analog inputs without a player never count as playing, so mark them \"Never auto power off\"."
+              "auto_off": "Turn the amplifier off after it has been on with nothing playing for this many minutes. 0 = never. Playing means: the linked player of the current input is playing (a player that went unavailable while playing still counts for 60 s), or — on inputs without a player — a digital input carries a signal. The countdown is not restarted by a player flapping between paused and unavailable or by network drops. Analog inputs without a player never count as playing, so mark them \"Never auto power off\"."
             }
           },
           "advanced": {
@@ -193,7 +193,7 @@
               "auto_off": "Auto power off after, min"
             },
             "data_description": {
-              "auto_off": "Turn the amplifier off after it has been on with nothing playing for this many minutes. 0 = never. Playing means: the linked player of the current input is playing, or a digital input carries a signal. Analog inputs without a player never count as playing, so mark them \"Never auto power off\"."
+              "auto_off": "Turn the amplifier off after it has been on with nothing playing for this many minutes. 0 = never. Playing means: the linked player of the current input is playing (a player that went unavailable while playing still counts for 60 s), or — on inputs without a player — a digital input carries a signal. The countdown is not restarted by a player flapping between paused and unavailable or by network drops. Analog inputs without a player never count as playing, so mark them \"Never auto power off\"."
             }
           },
           "advanced": {

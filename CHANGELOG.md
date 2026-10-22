@@ -1,5 +1,13 @@
 # Changelog
 
+## 4.3.0
+- Auto power off is robust against unreliable players and connections:
+  - The countdown is based on the moment playback stopped and is no longer restarted when the linked player flaps between `paused` / `idle` / `unavailable`, or when the connection to the amplifier drops. If the deadline passes while disconnected, the amplifier is turned off right after reconnecting.
+  - On an input with a linked player only the player decides whether something plays. An unavailable player is no longer replaced by the digital signal, which streamers often keep sending while paused and which kept the amplifier on forever.
+  - A player that becomes unavailable while playing counts as playing for 60 s (network glitch), then as not playing.
+- A player returning from `unavailable` to `playing` no longer re-triggers "switch to this input".
+- New `auto_off_at` attribute: when the amplifier will turn off.
+
 ## 4.2.0
 - Setup wizard ends with an overview page that lists all inputs, with navigation: *Finish setup*, *Change an input*, *Announcements*, *Back to inputs and general settings*. Home Assistant has no built-in back button in config flows, so this replaces it. Going back keeps what was already entered and does not ask again for inputs that are already configured.
 

@@ -166,17 +166,27 @@ The device gets diagnostic entities:
 When you add the integration, the config flow also checks that the device actually answers Rotel commands, not just that the port is open.
 
 ## Auto power off
-**Auto power off, min** (`0` disables it) turns the amplifier off after it has been on with nothing playing for the given time. The timer restarts every time playback stops, and is cancelled as soon as something plays or the amplifier is turned off.
+**Auto power off, min** (`0` disables it) turns the amplifier off after it has been on with nothing playing for the given time.
+
+The countdown starts at the moment playback stops and is reset only by real playback, by turning the amplifier off, by an announcement or by switching to a "never auto power off" input. It is **not** restarted by:
+- a player flapping between `paused`, `idle` and `unavailable`;
+- network problems of the player;
+- a dropped connection to the amplifier.
+
+If the time runs out while the amplifier is disconnected, it is turned off as soon as the connection is back. The `auto_off_at` attribute shows when it will turn off (empty while something plays).
 
 What counts as "playing":
 
 | Current input | Playing when |
 |---|---|
-| Has a linked player | the player is `playing` |
+| Has a linked player | the player is `playing` or `buffering`. Only the player decides: many streamers keep sending a digital signal while paused, so the signal is ignored here |
+| Has a linked player that is `unavailable` | it was playing and became unavailable less than 60 s ago (treated as a network glitch). After that, or if it was paused before, it counts as not playing |
 | Digital input (Coax, Optical, USB, Bluetooth, PC-USB) without a linked player | the amplifier reports a sample rate (a signal is present), e.g. the TV is on |
 | Analog input (CD, Aux, Tuner, Phono, XLR) without a linked player | never, so enable **"never auto power off on this input"** for it |
 
 The signal is queried 1.5 s after every input change and on every poll. The `signal` and `frequency` attributes show the current value.
+
+A player coming back from `unavailable` straight to `playing` is not a new start of playback, so it does not trigger "switch to this input" again.
 
 ## Actions
 | Action | Parameters |
